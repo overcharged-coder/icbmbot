@@ -18,7 +18,7 @@ engines:
 
   variants:
     dir: "./engines"
-    name: "fairy-stockfish_x86-64-bmi2"
+    name: "fairy-stockfish-largeboards_x86-64-bmi2"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 1.1
