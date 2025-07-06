@@ -33,7 +33,7 @@ engines:
     #  nodes: 5000000
   humans:
     dir: "./engines"
-    name: "Suprachessengine_v2.py"
+    name: "Suprachessengine_v2"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 1.0
