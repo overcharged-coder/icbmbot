@@ -84,7 +84,7 @@ opening_books:
       names:
       #  - ai
         - Perfect2023
-        - opimus3.1
+        - Opimus3.1
         - optimus2502
        # - optimus4
       #  - Opimus3.1
@@ -96,7 +96,7 @@ opening_books:
        # - Perfect2023
         - optimus4
      #   - Titans
-        - opimus3.1
+        - Opimus3.1
        # - optimus4
     humans: 
       selection: best_move 
