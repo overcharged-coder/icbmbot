@@ -95,7 +95,7 @@ opening_books:
       names:
        # - Perfect2023
         - optimus4
-        - Titans
+     #   - Titans
         - optimus2502
        # - optimus4
     humans: 
@@ -103,6 +103,7 @@ opening_books:
       names: 
         - gm
         - noob
+        - Titans
     
 
 online_moves:
