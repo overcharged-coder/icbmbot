@@ -84,17 +84,17 @@ opening_books:
       names:
         - ai
         - Perfect2023
-        - optimus4
+       # - optimus4
         - optimus2502
        # - optimus4
         - Opimus3.1
         - noob
     standard_black:
-      selection: uniform_random 
-      max depth : 45 
+      selection: best_move 
+     # max depth : 45 
       names:
        # - Perfect2023
-      #  - optimus2502
+        - optimus4
         - Titans
         - optimus2502
        # - optimus4
