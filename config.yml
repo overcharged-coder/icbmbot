@@ -94,9 +94,9 @@ opening_books:
       max depth : 45 
       names:
        # - Perfect2023
-        - optimus2502
+      #  - optimus2502
         - Titans
-       # - optimus4
+        - optimus2502
        # - optimus4
     humans: 
       selection: best_move 
@@ -219,10 +219,10 @@ whitelist:
   - Shresthmah
 
 books:
-  Titans: "./engines/optimus2409.bin"
+  Titans: "./engines/black.bin"
   optimus2502: "./engines/OPTIMUS2502.bin"
-  optimus4: "./engines/book1001.bin"
-  Perfect2023: "./engines/sfbook.bin"
+  optimus4: "./engines/win.bin"
+  Perfect2023: "./engines/white.bin"
   Opimus3.1: "./engines/optimus32.bin"
   noob: "./engines/Titans.bin"
   ai: "./engines/nikibook.bin"
