@@ -1,0 +1,578 @@
+#!/usr/bin/env python3
+import sys, time, os, math
+import chess, chess.polyglot, chess.syzygy
+
+# === UCI Config Options ===
+uci_options = {
+    "Threads": 1,
+    "Hash": 128,
+    "Move Overhead": 100,
+    "Max Nodes": 0,
+    "BookPath": "book.bin",
+    "SyzygyPath": "syzygy"
+}
+
+MAX_DEPTH = 50
+MATE_VALUE = 100000
+TIME_LIMIT = 3.0
+
+transposition_table = {}
+history_heuristic = {}
+killer_moves = [[None]*2 for _ in range(100)]  # ply -> [killer1, killer2]
+node_count = 0
+NODE_LIMIT = None
+polyglot_book = None
+syzygy_tb = None
+
+# Piece Values (centipawns)
+PIECE_VALUES = {
+    chess.PAWN: 100,
+    chess.KNIGHT: 320,
+    chess.BISHOP: 330,
+    chess.ROOK: 500,
+    chess.QUEEN: 900,
+    chess.KING: 20000
+}
+
+# Piece-Square Tables (middlegame)
+PST = {
+    chess.PAWN: [
+      0,   0,   0,   0,   0,   0,   0,   0,
+     50,  50,  50,  50,  50,  50,  50,  50,
+     10,  10,  20,  30,  30,  20,  10,  10,
+      5,   5,  10,  25,  25,  10,   5,   5,
+      0,   0,   0,  20,  20,   0,   0,   0,
+      5,  -5, -10,   0,   0, -10,  -5,   5,
+      5,  10,  10, -20, -20,  10,  10,   5,
+      0,   0,   0,   0,   0,   0,   0,   0
+    ],
+    chess.KNIGHT: [
+    -50, -40, -30, -30, -30, -30, -40, -50,
+    -40, -20,   0,   0,   0,   0, -20, -40,
+    -30,   0,  10,  15,  15,  10,   0, -30,
+    -30,   5,  15,  20,  20,  15,   5, -30,
+    -30,   0,  15,  20,  20,  15,   0, -30,
+    -30,   5,  10,  15,  15,  10,   5, -30,
+    -40, -20,   0,   5,   5,   0, -20, -40,
+    -50, -40, -30, -30, -30, -30, -40, -50
+    ],
+    chess.BISHOP: [
+    -20, -10, -10, -10, -10, -10, -10, -20,
+    -10,   0,   0,   0,   0,   0,   0, -10,
+    -10,   0,   5,  10,  10,   5,   0, -10,
+    -10,   5,   5,  10,  10,   5,   5, -10,
+    -10,   0,  10,  10,  10,  10,   0, -10,
+    -10,  10,  10,  10,  10,  10,  10, -10,
+    -10,   5,   0,   0,   0,   0,   5, -10,
+    -20, -10, -10, -10, -10, -10, -10, -20
+    ],
+    chess.ROOK: [
+      0,   0,   0,   0,   0,   0,   0,   0,
+      5,  10,  10,  10,  10,  10,  10,   5,
+     -5,   0,   0,   0,   0,   0,   0,  -5,
+     -5,   0,   0,   0,   0,   0,   0,  -5,
+     -5,   0,   0,   0,   0,   0,   0,  -5,
+     -5,   0,   0,   0,   0,   0,   0,  -5,
+     -5,   0,   0,   0,   0,   0,   0,  -5,
+      0,   0,   0,   5,   5,   0,   0,   0
+    ],
+    chess.QUEEN: [
+    -20, -10, -10,  -5,  -5, -10, -10, -20,
+    -10,   0,   0,   0,   0,   0,   0, -10,
+    -10,   0,   5,   5,   5,   5,   0, -10,
+     -5,   0,   5,   5,   5,   5,   0,  -5,
+      0,   0,   5,   5,   5,   5,   0,  -5,
+    -10,   5,   5,   5,   5,   5,   0, -10,
+    -10,   0,   5,   0,   0,   0,   0, -10,
+    -20, -10, -10,  -5,  -5, -10, -10, -20
+    ],
+    chess.KING: [
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -30, -40, -40, -50, -50, -40, -40, -30,
+    -20, -30, -30, -40, -40, -30, -30, -20,
+    -10, -20, -20, -20, -20, -20, -20, -10,
+     20,  20,   0,   0,   0,   0,  20,  20,
+     20,  30,  10,   0,   0,  10,  30,  20
+    ]
+}
+
+# Bonus values
+BISHOP_PAIR = 30
+ROOK_OPEN_FILE = 15
+ROOK_SEMI_OPEN_FILE = 10
+KNIGHT_OUTPOST = 20
+PASSED_PAWN = [0, 10, 30, 50, 75, 100, 150]
+DOUBLED_PAWN_PENALTY = -10
+ISOLATED_PAWN_PENALTY = -20
+BACKWARD_PAWN_PENALTY = -15
+WEAK_SQUARE_PENALTY = -5
+KING_SHIELD_BONUS = 5
+
+def evaluate_pawn_structure(board, color):
+    pawns = board.pieces(chess.PAWN, color)
+    pawn_files = [chess.square_file(sq) for sq in pawns]
+    doubled = isolated = backward = 0
+    passed_pawns = 0
+    
+    for sq in pawns:
+        file = chess.square_file(sq)
+        rank = chess.square_rank(sq) if color == chess.WHITE else 7 - chess.square_rank(sq)
+        
+        # Doubled pawns
+        if pawn_files.count(file) > 1:
+            doubled += 1
+        
+        # Isolated pawns
+        if not any(abs(f - file) == 1 for f in pawn_files if f != file):
+            isolated += 1
+        
+        # Passed pawns
+        opposing_pawns = board.pieces(chess.PAWN, not color)
+        passed = True
+        for f in [file-1, file, file+1]:
+            if f < 0 or f > 7:
+                continue
+            for r in range(rank+1, 8) if color == chess.WHITE else range(rank-1, -1, -1):
+                if chess.square(f, r) in opposing_pawns:
+                    passed = False
+                    break
+            if not passed:
+                break
+        if passed:
+            passed_pawns += PASSED_PAWN[min(rank, 6)]
+    
+    return (doubled * DOUBLED_PAWN_PENALTY + 
+            isolated * ISOLATED_PAWN_PENALTY + 
+            passed_pawns)
+
+def evaluate_king_safety(board, color):
+    king_sq = board.king(color)
+    if king_sq is None:
+        return 0
+    
+    safety = 0
+    file = chess.square_file(king_sq)
+    rank = chess.square_rank(king_sq)
+    
+    # Pawn shield
+    shield_files = [max(0, file-1), file, min(7, file+1)]
+    for f in shield_files:
+        for r in [rank+1, rank+2] if color == chess.WHITE else [rank-1, rank-2]:
+            if 0 <= r < 8:
+                sq = chess.square(f, r)
+                if board.piece_at(sq) == chess.Piece(chess.PAWN, color):
+                    safety += KING_SHIELD_BONUS
+    
+    # Open files near king
+    for f in [max(0, file-1), file, min(7, file+1)]:
+        if not any(board.piece_at(chess.square(f, r)) == chess.Piece(chess.PAWN, color) for r in range(8)):
+            safety += WEAK_SQUARE_PENALTY
+    
+    return safety
+
+def evaluate_piece_bonuses(board, color):
+    bonuses = 0
+    
+    # Bishop pair
+    if len(board.pieces(chess.BISHOP, color)) >= 2:
+        bonuses += BISHOP_PAIR
+    
+    # Rooks on open/semi-open files
+    for rook_sq in board.pieces(chess.ROOK, color):
+        file = chess.square_file(rook_sq)
+        # Open file
+        if not any(board.piece_at(chess.square(file, r)) == chess.Piece(chess.PAWN, color) for r in range(8)):
+            if not any(board.piece_at(chess.square(file, r)) == chess.Piece(chess.PAWN, not color) for r in range(8)):
+                bonuses += ROOK_OPEN_FILE
+            else:
+                bonuses += ROOK_SEMI_OPEN_FILE
+    
+    # Knight outposts
+    for knight_sq in board.pieces(chess.KNIGHT, color):
+        rank = chess.square_rank(knight_sq)
+        # Only consider knights in enemy half
+        if (color == chess.WHITE and rank > 3) or (color == chess.BLACK and rank < 4):
+            # Supported by pawn
+            for delta in [-1, 1]:
+                f = chess.square_file(knight_sq) + delta
+                if 0 <= f < 8:
+                    r = rank + (1 if color == chess.WHITE else -1)
+                    if chess.square(f, r) in board.pieces(chess.PAWN, color):
+                        bonuses += KNIGHT_OUTPOST
+                        break
+    
+    return bonuses
+
+def evaluate(board):
+    # Terminal conditions
+    if board.is_checkmate():
+        return -MATE_VALUE if board.turn else MATE_VALUE
+    if board.is_stalemate() or board.is_insufficient_material():
+        return 0
+    
+    # Material score
+    score = 0
+    for pt in PIECE_VALUES:
+        score += len(board.pieces(pt, chess.WHITE)) * PIECE_VALUES[pt]
+        score -= len(board.pieces(pt, chess.BLACK)) * PIECE_VALUES[pt]
+    
+    # Piece-square tables
+    for pt in PST:
+        for sq in board.pieces(pt, chess.WHITE):
+            score += PST[pt][sq]
+        for sq in board.pieces(pt, chess.BLACK):
+            score -= PST[pt][chess.square_mirror(sq)]
+    
+    # Pawn structure
+    score += evaluate_pawn_structure(board, chess.WHITE)
+    score -= evaluate_pawn_structure(board, chess.BLACK)
+    
+    # King safety
+    score += evaluate_king_safety(board, chess.WHITE)
+    score -= evaluate_king_safety(board, chess.BLACK)
+    
+    # Piece bonuses
+    score += evaluate_piece_bonuses(board, chess.WHITE)
+    score -= evaluate_piece_bonuses(board, chess.BLACK)
+    
+    # Return score from perspective of current player
+    return score if board.turn == chess.WHITE else -score
+
+def is_quiet(board, move):
+    return not board.is_capture(move) and not board.gives_check(move)
+
+def sort_moves(board, moves, ply):
+    move_scores = []
+    for move in moves:
+        score = 0
+        
+        # PV move is handled outside this function
+        if board.is_capture(move):
+            # MVV-LVA (Most Valuable Victim - Least Valuable Attacker)
+            tgt = board.piece_at(move.to_square)
+            if tgt:
+                score += PIECE_VALUES[tgt.piece_type] - PIECE_VALUES[board.piece_at(move.from_square).piece_type] // 10
+        
+        # Killer moves
+        if move == killer_moves[ply][0]:
+            score += 900
+        elif move == killer_moves[ply][1]:
+            score += 800
+        
+        # History heuristic
+        score += history_heuristic.get((board.turn, move.uci()), 0)
+        
+        # Promotions are good
+        if move.promotion:
+            score += PIECE_VALUES[move.promotion]
+        
+        move_scores.append(score)
+    
+    # Sort moves by score (descending)
+    return [m for _, m in sorted(zip(move_scores, moves), reverse=True)]
+
+def quiescence(board, alpha, beta):
+    global node_count
+    node_count += 1
+    if NODE_LIMIT and node_count > NODE_LIMIT:
+        raise TimeoutError
+    
+    stand_pat = evaluate(board)
+    if stand_pat >= beta:
+        return beta
+    if alpha < stand_pat:
+        alpha = stand_pat
+    
+    for move in sort_moves(board, [m for m in board.legal_moves if board.is_capture(m)], 0):
+        board.push(move)
+        score = -quiescence(board, -beta, -alpha)
+        board.pop()
+        
+        if score >= beta:
+            return beta
+        if score > alpha:
+            alpha = score
+    
+    return alpha
+
+def alpha_beta(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
+    global node_count
+    if time.time() - start_time > max_time:
+        raise TimeoutError
+    if NODE_LIMIT and node_count > NODE_LIMIT:
+        raise TimeoutError
+    
+    # Check for repetition or 50-move rule
+    if board.is_repetition(2) or board.can_claim_fifty_moves():
+        return 0
+    
+    # TT lookup
+    key = board.transposition_key()
+    tt_entry = transposition_table.get(key)
+    if tt_entry and tt_entry["depth"] >= depth:
+        if tt_entry["flag"] == "exact":
+            return tt_entry["value"]
+        elif tt_entry["flag"] == "lower":
+            alpha = max(alpha, tt_entry["value"])
+        elif tt_entry["flag"] == "upper":
+            beta = min(beta, tt_entry["value"])
+        if alpha >= beta:
+            return tt_entry["value"]
+    
+    # Null move pruning
+    if depth >= 3 and can_null and not board.is_check() and ply > 0:
+        board.push(chess.Move.null())
+        score = -alpha_beta(board, depth-3, -beta, -beta+1, start_time, max_time, ply+1, False)
+        board.pop()
+        if score >= beta:
+            return beta
+    
+    if depth == 0:
+        return quiescence(board, alpha, beta)
+    
+    legal_moves = list(board.legal_moves)
+    if not legal_moves:
+        if board.is_check():
+            return -MATE_VALUE + ply  # Prefer shorter mates
+        return 0
+    
+    # Internal iterative deepening
+    if depth >= 4 and not tt_entry:
+        alpha_beta(board, depth-2, alpha, beta, start_time, max_time, ply, can_null)
+        tt_entry = transposition_table.get(key)
+    
+    moves = sort_moves(board, legal_moves, ply)
+    best_move = None
+    best_score = -float("inf")
+    flag = "upper"
+    
+    for i, move in enumerate(moves):
+        board.push(move)
+        node_count += 1
+        
+        # Late move reduction
+        if i >= 4 and depth >= 3 and is_quiet(board, move):
+            score = -alpha_beta(board, depth-2, -beta, -alpha, start_time, max_time, ply+1)
+        else:
+            score = -alpha_beta(board, depth-1, -beta, -alpha, start_time, max_time, ply+1)
+        
+        board.pop()
+        
+        if score > best_score:
+            best_score = score
+            best_move = move
+            if score > alpha:
+                alpha = score
+                flag = "exact"
+                # Update killer moves
+                if is_quiet(board, move):
+                    if move != killer_moves[ply][0]:
+                        killer_moves[ply][1] = killer_moves[ply][0]
+                        killer_moves[ply][0] = move
+                # Update history heuristic
+                history_heuristic[(board.turn, move.uci())] = history_heuristic.get((board.turn, move.uci()), 0) + depth*depth
+        
+        if alpha >= beta:
+            flag = "lower"
+            break
+    
+    # TT store
+    transposition_table[key] = {
+        "value": best_score,
+        "depth": depth,
+        "flag": flag,
+        "move": best_move
+    }
+    
+    return best_score
+
+def calculate_time(board, wtime, btime, winc, binc, movestogo):
+    if board.turn == chess.WHITE:
+        time_left = wtime
+        inc = winc
+    else:
+        time_left = btime
+        inc = binc
+    
+    if movestogo is not None:
+        # Tournament time control with fixed moves per period
+        target = time_left / max(movestogo, 1)
+    else:
+        # Increment time control
+        if time_left > inc * 2:
+            target = time_left / 40 + inc * 0.8
+        else:
+            target = time_left / 10
+    
+    # Don't use more than 1/4 of remaining time
+    target = min(target, time_left / 4)
+    
+    # Add move overhead
+    target -= uci_options["Move Overhead"] / 1000.0
+    
+    return max(target, 0.01)  # Always have at least 10ms
+
+def choose_best_move(board, depth=None, nodes=None, wtime=None, btime=None, winc=None, binc=None, movestogo=None):
+    global node_count, NODE_LIMIT
+    node_count = 0
+    NODE_LIMIT = nodes
+    
+    # Check for book moves
+    if polyglot_book:
+        try:
+            return polyglot_book.find(board).move()
+        except:
+            pass
+    
+    # Check for Syzygy tablebase
+    if syzygy_tb and len(board.piece_map()) <= 6:
+        try:
+            return syzygy_tb.probe_root(board)
+        except:
+            pass
+    
+    # Calculate time
+    if wtime is not None and btime is not None:
+        time_limit = calculate_time(board, wtime, btime, winc, binc, movestogo)
+    else:
+        time_limit = TIME_LIMIT
+    
+    best_move = None
+    best_score = -float("inf")
+    start_time = time.time()
+    max_depth = depth or MAX_DEPTH
+    
+    # Ensure we have at least one legal move
+    legal_moves = list(board.legal_moves)
+    if not legal_moves:
+        return None
+    best_move = legal_moves[0]
+    
+    try:
+        for d in range(1, max_depth + 1):
+            for move in legal_moves:
+                board.push(move)
+                try:
+                    score = -alpha_beta(board, d-1, -float("inf"), float("inf"), start_time, time_limit)
+                except TimeoutError:
+                    board.pop()
+                    raise
+                board.pop()
+                
+                if score > best_score or (score == best_score and move.uci() != best_move.uci()):
+                    best_score = score
+                    best_move = move
+                
+                # Early exit if we found mate
+                if best_score >= MATE_VALUE - 100:
+                    return best_move
+            
+            # Check time after each depth iteration
+            if time.time() - start_time > time_limit * 0.9:
+                break
+    except TimeoutError:
+        pass
+    
+    return best_move
+
+def set_uci_option(line):
+    global polyglot_book, syzygy_tb
+    parts = line.split()
+    if "name" in parts and "value" in parts:
+        name = " ".join(parts[parts.index("name") + 1:parts.index("value")])
+        value = " ".join(parts[parts.index("value") + 1:])
+        uci_options[name] = value
+        if name == "BookPath" and os.path.exists(value):
+            try:
+                polyglot_book = chess.polyglot.open_reader(value)
+            except:
+                polyglot_book = None
+        elif name == "SyzygyPath" and os.path.isdir(value):
+            try:
+                syzygy_tb = chess.syzygy.Tablebase()
+                syzygy_tb.add_directory(value)
+            except:
+                syzygy_tb = None
+
+def handle_position(board, line):
+    parts = line.split()
+    if "startpos" in parts:
+        board.reset()
+        if "moves" in parts:
+            for mv in parts[parts.index("moves") + 1:]:
+                board.push_uci(mv)
+    elif "fen" in parts:
+        idx = parts.index("fen")
+        fen = " ".join(parts[idx + 1:idx + 7])
+        board.set_fen(fen)
+        if "moves" in parts:
+            for mv in parts[parts.index("moves") + 1:]:
+                board.push_uci(mv)
+
+def handle_go(board, line):
+    depth = nodes = wtime = btime = winc = binc = movestogo = None
+    parts = line.split()
+    if "depth" in parts:
+        depth = int(parts[parts.index("depth") + 1])
+    if "nodes" in parts:
+        nodes = int(parts[parts.index("nodes") + 1])
+    if "wtime" in parts:
+        wtime = int(parts[parts.index("wtime") + 1])
+    if "btime" in parts:
+        btime = int(parts[parts.index("btime") + 1])
+    if "winc" in parts:
+        winc = int(parts[parts.index("winc") + 1])
+    if "binc" in parts:
+        binc = int(parts[parts.index("binc") + 1])
+    if "movestogo" in parts:
+        movestogo = int(parts[parts.index("movestogo") + 1])
+    
+    move = choose_best_move(
+        board,
+        depth=depth,
+        nodes=nodes,
+        wtime=wtime,
+        btime=btime,
+        winc=winc,
+        binc=binc,
+        movestogo=movestogo
+    )
+    print("bestmove", move.uci() if move else "0000")
+
+def main():
+    board = chess.Board()
+    while True:
+        line = sys.stdin.readline()
+        if not line:
+            break
+        line = line.strip()
+        if line == "uci":
+            print("id name Supracheckmate v3")
+            print("id author Suprateem Das")
+            print("option name Threads type spin default 1 min 1 max 16")
+            print("option name Hash type spin default 128 min 1 max 4096")
+            print("option name Move Overhead type spin default 100 min 0 max 10000")
+            print("option name Max Nodes type spin default 0 min 0 max 100000000")
+            print("option name BookPath type string default book.bin")
+            print("option name SyzygyPath type string default syzygy")
+            print("uciok")
+        elif line == "isready":
+            print("readyok")
+        elif line.startswith("setoption"):
+            set_uci_option(line)
+        elif line.startswith("ucinewgame"):
+            board.reset()
+            transposition_table.clear()
+            history_heuristic.clear()
+        elif line.startswith("position"):
+            handle_position(board, line)
+        elif line.startswith("go"):
+            handle_go(board, line)
+        elif line == "quit":
+            break
+        sys.stdout.flush()
+
+if __name__ == "__main__":
+    main()
