@@ -84,10 +84,10 @@ opening_books:
       names:
         - ai
         - Perfect2023
-       # - optimus4
+        - opimus3.1
         - optimus2502
        # - optimus4
-        - Opimus3.1
+      #  - Opimus3.1
         - noob
     standard_black:
       selection: best_move 
@@ -96,7 +96,7 @@ opening_books:
        # - Perfect2023
         - optimus4
      #   - Titans
-        - optimus2502
+        - opimus3.1
        # - optimus4
     humans: 
       selection: best_move 
@@ -224,7 +224,7 @@ books:
   optimus2502: "./engines/OPTIMUS2502.bin"
   optimus4: "./engines/win.bin"
   Perfect2023: "./engines/white.bin"
-  Opimus3.1: "./engines/optimus32.bin"
+  Opimus3.1: "./engines/Optical.bin"
   noob: "./engines/Titans.bin"
   ai: "./engines/nikibook.bin"
   gm: "./engines/gm2001(1).bin"
