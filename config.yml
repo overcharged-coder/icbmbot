@@ -82,7 +82,7 @@ opening_books:
       selection: best_move 
      # max_depth: 80
       names:
-        - ai
+      #  - ai
         - Perfect2023
         - opimus3.1
         - optimus2502
