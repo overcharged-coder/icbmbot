@@ -49,7 +49,7 @@ jobs:
         run: | 
              chmod +x ./engines/stockfish-ubuntu-x86-64-bmi2
              chmod +x ./engines/fairy-stockfish_x86-64-bmi2
-             chmod +x ./engines/Supracheckmate_v2
+             chmod +x ./engines/Suprachessengine_v2
 
       - name: Run Bot
         run: |
