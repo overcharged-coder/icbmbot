@@ -408,6 +408,7 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
     best_move = None
     start_time = time.time()
     max_time = TIME_LIMIT
+    best_score = -MATE_VALUE
     
     if board.turn == chess.WHITE and wtime:
         max_time = min(max_time, wtime / 1000.0)
