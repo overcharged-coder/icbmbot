@@ -462,7 +462,7 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
                 finally:
                     board.pop()
 
-                if score > alpha or best_move is None:
+                if score > best_score or best_move is None:
                     best_score = score
                     best_move = move
                     if best_score >= MATE_VALUE - 100:
