@@ -393,7 +393,7 @@ def alpha_beta(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=
     
     # Store in TT
     if best_move:
-        bound = 'EXACT' if best_score <= alpha else ('UPPER' if best_score >= beta else 'LOWER')
+        bound = 'EXACT' if alpha < best_score < beta else ('LOWER' if best_score >= beta else 'UPPER')
         transposition_table[zobrist_key] = TTEntry(
             zobrist_key, depth, best_score, bound, best_move
         )
