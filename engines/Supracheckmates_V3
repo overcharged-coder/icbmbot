@@ -409,12 +409,12 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
     start_time = time.time()
     max_time = TIME_LIMIT
     best_score = -MATE_VALUE
-    
+
     if board.turn == chess.WHITE and wtime:
         max_time = min(max_time, wtime / 1000.0)
     elif board.turn == chess.BLACK and btime:
         max_time = min(max_time, btime / 1000.0)
-    
+
     max_depth = depth or MAX_DEPTH
     legal_moves = list(board.legal_moves)
     if not legal_moves:
@@ -441,38 +441,40 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
             pass
 
     best_move = legal_moves[0]
-try:
-    for d in range(1, max_depth + 1):
-        alpha = -MATE_VALUE
-        beta = MATE_VALUE
-        if d >= 4:
-            alpha = best_score - ASPIRATION_WINDOW
-            beta = best_score + ASPIRATION_WINDOW
 
-        for move in legal_moves:
-            board.push(move)
-            try:
-                score = -alpha_beta(board, d - 1, -beta, -alpha, start_time, max_time)
+    try:
+        for d in range(1, max_depth + 1):
+            alpha = -MATE_VALUE
+            beta = MATE_VALUE
+            if d >= 4:
+                alpha = best_score - ASPIRATION_WINDOW
+                beta = best_score + ASPIRATION_WINDOW
 
-                # Aspiration fail-soft retry
-                if score <= alpha or score >= beta:
-                    alpha = -MATE_VALUE
-                    beta = MATE_VALUE
+            for move in legal_moves:
+                board.push(move)
+                try:
                     score = -alpha_beta(board, d - 1, -beta, -alpha, start_time, max_time)
-            finally:
-                board.pop()
+                    if score <= alpha or score >= beta:
+                        # Aspiration fail-soft retry
+                        alpha = -MATE_VALUE
+                        beta = MATE_VALUE
+                        score = -alpha_beta(board, d - 1, -beta, -alpha, start_time, max_time)
+                finally:
+                    board.pop()
 
-            if score > alpha or best_move is None:
-                best_score = score
-                best_move = move
-                if best_score >= MATE_VALUE - 100:
-                    return best_move
+                if score > alpha or best_move is None:
+                    best_score = score
+                    best_move = move
+                    if best_score >= MATE_VALUE - 100:
+                        return best_move
 
-        if time.time() - start_time > max_time * 0.9:
-            break
-except TimeoutError:
-    pass
-return best_move
+            if time.time() - start_time > max_time * 0.9:
+                break
+    except TimeoutError:
+        pass
+
+    return best_move
+                    
     
 # === UCI Protocol ===
 def main():
