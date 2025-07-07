@@ -425,7 +425,7 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
         try:
             with chess.polyglot.open_reader(uci_options["BookPath"]) as reader:
                 entry = reader.weighted_choice(board)
-                return entry.move()
+                return entry.move
         except:
             pass
 
