@@ -22,16 +22,19 @@ MATE_VALUE = 100000
 TIME_LIMIT = 3.0
 LMR_BASE = 0.75
 LMR_DIVISOR = 2.0
+NULL_MOVE_REDUCTION = 3
 
 # === Global State ===
 transposition_table = {}
 pawn_hash_table = {}
 history_heuristic = {}
 killer_moves = [[None]*2 for _ in range(100)]
+counter_moves = {}
 node_count = 0
 NODE_LIMIT = None
 polyglot_book = None
 syzygy_tb = None
+principal_variation = {}
 
 # === Piece Values (MG/EG) ===
 PIECE_VALUES = {
@@ -43,22 +46,98 @@ PIECE_VALUES = {
     chess.KING: [20000, 20000]
 }
 
-# === Piece-Square Tables (MG/EG) ===
+# === PST (real values) ===
+# Source: Simplified Stockfish PSTs
 PST = {
-    chess.PAWN: [[0, 5, 5, 0, 5, 10, 50, 0] * 8, [0]*64],
-    chess.KNIGHT: [[-50, -40, -30, -30, -30, -30, -40, -50] * 8, [0]*64],
-    chess.BISHOP: [[-20, -10, -10, -10, -10, -10, -10, -20] * 8, [0]*64],
-    chess.ROOK: [[0, 0, 5, 10, 10, 5, 0, 0] * 8, [0]*64],
-    chess.QUEEN: [[-20, -10, -10, -5, -5, -10, -10, -20] * 8, [0]*64],
-    chess.KING: [[20, 30, 10, 0, 0, 10, 30, 20] * 8, [0]*64]
+    chess.PAWN: [[
+         0,  0,  0,  0,  0,  0,  0,  0,
+         5, 10, 10,-20,-20, 10, 10,  5,
+         5, -5,-10,  0,  0,-10, -5,  5,
+         0,  0,  0, 20, 20,  0,  0,  0,
+         5,  5, 10,25,25, 10,  5,  5,
+        10, 10, 20,30,30, 20, 10, 10,
+        50, 50, 50,50,50, 50, 50, 50,
+         0,  0,  0,  0,  0,  0,  0,  0
+    ]] * 2,
+    chess.KNIGHT: [[
+        -50,-40,-30,-30,-30,-30,-40,-50,
+        -40,-20,  0,  0,  0,  0,-20,-40,
+        -30,  0, 10,15,15,10,  0,-30,
+        -30,  5, 15,20,20,15,  5,-30,
+        -30,  0, 15,20,20,15,  0,-30,
+        -30,  5, 10,15,15,10,  5,-30,
+        -40,-20,  0,  5,  5,  0,-20,-40,
+        -50,-40,-30,-30,-30,-30,-40,-50
+    ]] * 2,
+    chess.BISHOP: [[
+        -20,-10,-10,-10,-10,-10,-10,-20,
+        -10,  0,  0,  0,  0,  0,  0,-10,
+        -10,  0,  5,10,10,  5,  0,-10,
+        -10,  5,  5,10,10,  5,  5,-10,
+        -10,  0, 10,10,10,10,  0,-10,
+        -10, 10,10,10,10,10,10,-10,
+        -10,  5,  0,  0,  0,  0,  5,-10,
+        -20,-10,-10,-10,-10,-10,-10,-20
+    ]] * 2,
+    chess.ROOK: [[
+          0,  0,  0,  0,  0,  0,  0,  0,
+          5, 10, 10, 10, 10, 10, 10,  5,
+         -5,  0,  0,  0,  0,  0,  0, -5,
+         -5,  0,  0,  0,  0,  0,  0, -5,
+         -5,  0,  0,  0,  0,  0,  0, -5,
+         -5,  0,  0,  0,  0,  0,  0, -5,
+         -5,  0,  0,  0,  0,  0,  0, -5,
+          0,  0,  0,  5,  5,  0,  0,  0
+    ]] * 2,
+    chess.QUEEN: [[
+        -20,-10,-10, -5, -5,-10,-10,-20,
+        -10,  0,  0,  0,  0,  0,  0,-10,
+        -10,  0,  5,  5,  5,  5,  0,-10,
+         -5,  0,  5,  5,  5,  5,  0, -5,
+          0,  0,  5,  5,  5,  5,  0, -5,
+        -10,  5,  5,  5,  5,  5,  0,-10,
+        -10,  0,  5,  0,  0,  0,  0,-10,
+        -20,-10,-10, -5, -5,-10,-10,-20
+    ]] * 2,
+    chess.KING: [[
+        -30,-40,-40,-50,-50,-40,-40,-30,
+        -30,-40,-40,-50,-50,-40,-40,-30,
+        -30,-40,-40,-50,-50,-40,-40,-30,
+        -30,-40,-40,-50,-50,-40,-40,-30,
+        -20,-30,-30,-40,-40,-30,-30,-20,
+        -10,-20,-20,-20,-20,-20,-20,-10,
+         20, 20,  0,  0,  0,  0, 20, 20,
+         20, 30, 10,  0,  0, 10, 30, 20
+    ]] * 2
 }
 
 # === Evaluation Parameters ===
-BISHOP_PAIR = [30, 50]  # MG, EG
-ROOK_OPEN_FILE = [15, 25]
-KNIGHT_OUTPOST = [20, 30]
-PASSED_PAWN = [[0, 10, 30, 50, 75, 100, 150], [0, 20, 40, 70, 120, 200, 300]]  # MG, EG
+PASSED_PAWN = [[0, 10, 30, 50, 75, 100, 150], [0, 20, 40, 70, 120, 200, 300]]
 
+# The rest of the code remains unchanged from previous implementation.
+# === Static Exchange Evaluation ===
+def static_exchange_eval(board, move):
+    if not board.is_capture(move):
+        return 0
+    victim_value = PIECE_VALUES.get(board.piece_type_at(move.to_square), [0])[0]
+    return victim_value
+
+# === Move Ordering ===
+def score_move(board, move, pv_move, depth, ply):
+    if move == pv_move:
+        return 1000000
+    if board.is_capture(move):
+        return 100000 + static_exchange_eval(board, move)
+    if move in killer_moves[ply]:
+        return 90000
+    if move in counter_moves.get(board.peek().uci() if board.move_stack else '', []):
+        return 80000
+    return history_heuristic.get((move.from_square, move.to_square), 0)
+
+def order_moves(board, moves, pv_move, depth, ply):
+    return sorted(moves, key=lambda m: -score_move(board, m, pv_move, depth, ply))
+
+# === Evaluation ===
 def game_phase(board):
     phase = 0
     for piece in [chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN]:
@@ -68,26 +147,20 @@ def game_phase(board):
 def interpolate(mg, eg, phase):
     return (mg * (256 - phase) + eg * phase) // 256
 
+def king_safety(board, color):
+    king_sq = board.king(color)
+    if king_sq is None:
+        return 0
+    return -20 * len(board.attackers(not color, king_sq))
+
 def evaluate_pawn_structure(board, color, pawn_hash):
     hash_key = zlib.crc32(str(sorted(board.pieces(chess.PAWN, color))).encode())
     if hash_key in pawn_hash:
         return pawn_hash[hash_key]
-
     score = 0
-    pawns = board.pieces(chess.PAWN, color)
-    for sq in pawns:
-        rank = chess.square_rank(sq)
-        file = chess.square_file(sq)
-        forward = range(rank + 1, 8) if color == chess.WHITE else range(rank - 1, -1, -1)
-        passed = True
-        for r in forward:
-            for f in [file - 1, file, file + 1]:
-                if 0 <= f < 8:
-                    if board.piece_at(chess.square(f, r)) == chess.Piece(chess.PAWN, not color):
-                        passed = False
-        if passed:
-            score += PASSED_PAWN[0 if color == chess.WHITE else 1][rank if color == chess.WHITE else 7 - rank]
-
+    for sq in board.pieces(chess.PAWN, color):
+        rank = chess.square_rank(sq) if color == chess.WHITE else 7 - chess.square_rank(sq)
+        score += PASSED_PAWN[color][min(rank, 6)]
     pawn_hash[hash_key] = score
     return score
 
@@ -101,70 +174,128 @@ def evaluate(board):
         for sq in board.pieces(pt, chess.WHITE):
             score += interpolate(PST[pt][0][sq], PST[pt][1][sq], phase)
         for sq in board.pieces(pt, chess.BLACK):
-            mirror_sq = chess.square_mirror(sq)
-            score -= interpolate(PST[pt][0][mirror_sq], PST[pt][1][mirror_sq], phase)
-
+            mirror = chess.square_mirror(sq)
+            score -= interpolate(PST[pt][0][mirror], PST[pt][1][mirror], phase)
     score += evaluate_pawn_structure(board, chess.WHITE, pawn_hash_table)
     score -= evaluate_pawn_structure(board, chess.BLACK, pawn_hash_table)
-
+    score += king_safety(board, chess.WHITE)
+    score -= king_safety(board, chess.BLACK)
     return score if board.turn == chess.WHITE else -score
 
-def is_quiet(board, move):
-    return not board.is_capture(move) and not board.gives_check(move)
+# === Quiescence Search ===
+def quiescence(board, alpha, beta):
+    global node_count
+    stand_pat = evaluate(board)
+    if stand_pat >= beta:
+        return beta
+    if alpha < stand_pat:
+        alpha = stand_pat
+    for move in board.legal_moves:
+        if board.is_capture(move):
+            board.push(move)
+            node_count += 1
+            score = -quiescence(board, -beta, -alpha)
+            board.pop()
+            if score >= beta:
+                return beta
+            if score > alpha:
+                alpha = score
+    return alpha
 
+# === Alpha-Beta Search ===
 def alpha_beta(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
     global node_count
     if time.time() - start_time > max_time:
         raise TimeoutError
-
     if depth == 0:
-        return evaluate(board)
-
+        return quiescence(board, alpha, beta)
+    if can_null and depth >= 3 and not board.is_check():
+        board.push(chess.Move.null())
+        score = -alpha_beta(board, depth - NULL_MOVE_REDUCTION - 1, -beta, -beta + 1, start_time, max_time, ply + 1, False)
+        board.pop()
+        if score >= beta:
+            return beta
+    pv_move = principal_variation.get(board.fen(), None)
     moves = list(board.legal_moves)
-    best_score = -float("inf")
-
-    for i, move in enumerate(sorted(moves, key=lambda m: history_heuristic.get((board.piece_at(m.from_square), m.to_square), 0), reverse=True)):
+    moves = order_moves(board, moves, pv_move, depth, ply)
+    best_score = -float('inf')
+    best_move = None
+    for i, move in enumerate(moves):
         board.push(move)
         node_count += 1
-
-        if i >= 3 and depth >= 3 and is_quiet(board, move):
-            reduction = int(math.log(i + 1) * LMR_BASE + LMR_DIVISOR)
-            reduced_depth = max(1, depth - 1 - reduction)
-            score = -alpha_beta(board, reduced_depth, -beta, -alpha, start_time, max_time, ply + 1)
-        else:
-            score = -alpha_beta(board, depth - 1, -beta, -alpha, start_time, max_time, ply + 1)
-
-        board.pop()
-
+        try:
+            if i >= 3 and depth >= 3 and not board.is_capture(move) and not board.gives_check():
+                reduction = int(math.log(i + 1) * LMR_BASE + LMR_DIVISOR)
+                reduced_depth = max(1, depth - 1 - reduction)
+                score = -alpha_beta(board, reduced_depth, -beta, -alpha, start_time, max_time, ply + 1)
+            else:
+                score = -alpha_beta(board, depth - 1, -beta, -alpha, start_time, max_time, ply + 1)
+        finally:
+            board.pop()
         if score > best_score:
             best_score = score
-        if best_score > alpha:
-            alpha = best_score
+            best_move = move
+        if score > alpha:
+            alpha = score
         if alpha >= beta:
+            if not board.is_capture(move):
+                killer_moves[ply][1] = killer_moves[ply][0]
+                killer_moves[ply][0] = move
+                history_heuristic[(move.from_square, move.to_square)] = history_heuristic.get((move.from_square, move.to_square), 0) + depth * depth
+                if board.move_stack:
+                    last_move = board.peek().uci()
+                    counter_moves[last_move] = [move]
             break
-
+    if best_move:
+        principal_variation[board.fen()] = best_move
     return best_score
 
-def choose_best_move(board, depth=None, nodes=None, wtime=None, btime=None, winc=None, binc=None, movestogo=None):
+# === Move Selection ===
+def choose_best_move(board, depth=None, wtime=None, btime=None):
     global node_count
     node_count = 0
     best_move = None
-    best_score = -float("inf")
+    best_score = -float('inf')
     start_time = time.time()
     max_time = TIME_LIMIT
+    if board.turn == chess.WHITE and wtime:
+        max_time = min(max_time, wtime / 1000.0)
+    elif board.turn == chess.BLACK and btime:
+        max_time = min(max_time, btime / 1000.0)
     max_depth = depth or MAX_DEPTH
-
     legal_moves = list(board.legal_moves)
     if not legal_moves:
         return None
-    best_move = legal_moves[0]
 
+    # Polyglot opening book
+    if os.path.exists(uci_options["BookPath"]):
+        try:
+            with chess.polyglot.open_reader(uci_options["BookPath"]) as reader:
+                entry = reader.weighted_choice(board)
+                return entry.move()
+        except:
+            pass
+
+    # Syzygy tablebase
+    if os.path.exists(uci_options["SyzygyPath"]):
+        try:
+            with chess.syzygy.open_tablebase(uci_options["SyzygyPath"]) as syzygy:
+                if board.is_valid() and syzygy.probe_wdl(board) is not None:
+                    move = syzygy.probe_dtz(board)[1]
+                    if move in board.legal_moves:
+                        return move
+        except:
+            pass
+
+    best_move = legal_moves[0]
     try:
         for d in range(1, max_depth + 1):
             for move in legal_moves:
                 board.push(move)
-                score = -alpha_beta(board, d - 1, -MATE_VALUE, MATE_VALUE, start_time, max_time)
-                board.pop()
+                try:
+                    score = -alpha_beta(board, d - 1, -MATE_VALUE, MATE_VALUE, start_time, max_time)
+                finally:
+                    board.pop()
                 if score > best_score:
                     best_score = score
                     best_move = move
@@ -174,9 +305,9 @@ def choose_best_move(board, depth=None, nodes=None, wtime=None, btime=None, winc
                 break
     except TimeoutError:
         pass
-
     return best_move
 
+# === UCI Protocol ===
 def main():
     board = chess.Board()
     while True:
@@ -205,7 +336,13 @@ def main():
                     for mv in parts[parts.index("moves") + 1:]:
                         board.push_uci(mv)
         elif line.startswith("go"):
-            move = choose_best_move(board)
+            tokens = line.split()
+            wtime = btime = None
+            if "wtime" in tokens:
+                wtime = int(tokens[tokens.index("wtime") + 1])
+            if "btime" in tokens:
+                btime = int(tokens[tokens.index("btime") + 1])
+            move = choose_best_move(board, wtime=wtime, btime=btime)
             print("bestmove", move.uci() if move else "0000")
         elif line == "quit":
             break
@@ -215,6 +352,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        logger.exception("Engine crashed")
+        import logging
+        logging.exception("Engine crashed")
         print(f"info string Engine error: {e}")
         sys.exit(1)
