@@ -76,7 +76,7 @@ gaviota:
 
 opening_books:
   enabled: true
-  priority: 999
+  priority: 900
   books:
     standard_white:
       selection: best_move 
