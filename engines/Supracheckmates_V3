@@ -449,25 +449,25 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
             if d >= 4:
                 alpha = best_score - ASPIRATION_WINDOW
                 beta = best_score + ASPIRATION_WINDOW
+                for move in legal_moves:
+        board.push(move)
+        try:
+            score = -alpha_beta(board, d - 1, -beta, -alpha, start_time, max_time)
             
-            for move in legal_moves:
-                board.push(move)
-                try:
-                    score = -alpha_beta(board, d - 1, -beta, -alpha, start_time, max_time)
-                finally:
-                    board.pop()
-                
-                if score > alpha or best_move is None:
-                    best_score = score
-                    best_move = move
-                    if best_score >= MATE_VALUE - 100:
-                        return best_move
-            if time.time() - start_time > max_time * 0.9:
-                break
-    except TimeoutError:
-        pass
-    
-    return best_move
+            # Aspiration fail-soft retry
+            if score <= alpha or score >= beta:
+                alpha = -MATE_VALUE
+                beta = MATE_VALUE
+                score = -alpha_beta(board, d - 1, -beta, -alpha, start_time, max_time)
+        finally:
+            board.pop()
+        
+        if score > alpha or best_move is None:
+            best_score = score
+            best_move = move
+            if best_score >= MATE_VALUE - 100:
+                return best_move
+
 
 # === UCI Protocol ===
 def main():
