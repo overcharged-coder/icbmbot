@@ -219,7 +219,8 @@ messages:
 whitelist:
   - Supratsa
   - Shresthmah
-
+blacklist:
+  - eNErGyOFbEiNGbOT
 books:
   Titans: "./engines/black.bin"
   optimus2502: "./engines/OPTIMUS2502.bin"
