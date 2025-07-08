@@ -498,18 +498,20 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
     try:
         with chess.polyglot.open_reader(uci_options["BookPath"]) as reader:
             entry = reader.weighted_choice(board)
+            logger.info("Using Polyglot book move.")
             return entry.move
     except:
-        pass
+        logger.info("No book move available.")
 
     try:
         with chess.syzygy.open_tablebase(uci_options["SyzygyPath"]) as syzygy:
             if board.is_valid() and syzygy.probe_wdl(board) is not None:
                 move = syzygy.probe_dtz(board)[1]
                 if move in board.legal_moves:
+                    logger.info("Using Syzygy tablebase move.")
                     return move
     except:
-        pass
+        logger.info("No tablebase move available.")
 
     best_move = None
     best_score = None
@@ -525,13 +527,11 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
 
             score = -pvs(board, d, -beta, -alpha, start_time, max_time)
 
-            # Try to get the best move from the TT
             tt_entry = transposition_table.get(compute_zobrist_key(board))
             if tt_entry and tt_entry.best_move in board.legal_moves:
                 best_move = tt_entry.best_move
                 best_score = score
             else:
-                # Fallback: search best among all legal moves manually at this depth
                 for move in legal_moves:
                     board.push(move)
                     try:
@@ -542,7 +542,6 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
                         best_score = move_score
                         best_move = move
 
-            # Output PV info
             if best_score is not None:
                 if abs(best_score) >= MATE_VALUE - 100:
                     mate_in = (MATE_VALUE - abs(best_score)) // 2 + 1
@@ -554,9 +553,13 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
                 break
 
     except TimeoutError:
-        pass
+        logger.warning("Search timed out.")
     except Exception as e:
         logger.exception("Exception in choose_best_move")
+
+    if best_move is None and legal_moves:
+        logger.warning("Search failed to find move, falling back to first legal move.")
+        best_move = legal_moves[0]
 
     return best_move
 
