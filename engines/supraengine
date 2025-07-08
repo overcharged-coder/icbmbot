@@ -25,6 +25,9 @@ LMR_DIVISOR = 2.0
 NULL_MOVE_REDUCTION = 3
 FUTILITY_MARGIN = 100
 ASPIRATION_WINDOW = 50
+RAZOR_MARGIN = 200
+PROBCUT_DEPTH = 3
+PROBCUT_MARGIN = 150
 
 # === Zobrist Hashing ===
 zobrist_keys = [[random.getrandbits(64) for _ in range(12)] for _ in range(64)]
@@ -474,58 +477,43 @@ def pvs(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
 def calculate_time_limit(wtime, btime, winc, binc, moves_to_go, board):
     base_time = wtime if board.turn == chess.WHITE else btime
     increment = winc if board.turn == chess.WHITE else binc
-
-    if base_time is None:
-        return TIME_LIMIT
-
-    base_time = max(0, base_time)
+    base_time = max(0, base_time or 0)
     increment = increment or 0
-    moves_remaining = moves_to_go or 30  # Fallback if not provided
-
-    # Use 90% of available time
+    moves_remaining = moves_to_go or 30
     safe_time = base_time * 0.9
     time_per_move = safe_time / moves_remaining + increment * 0.5
+    return max(0.05, min(time_per_move / 1000.0, 10.0))
 
-    return max(0.05, min(time_per_move / 1000.0, 10.0))  # Clamp in seconds
-
-
+# --- Search Entry ---
 def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=None, moves_to_go=None):
     global node_count
     node_count = 0
     best_move = None
     best_score = None
     start_time = time.time()
-
-    # Improved time control
     max_time = calculate_time_limit(wtime, btime, winc, binc, moves_to_go, board)
-
     max_depth = depth or MAX_DEPTH
     legal_moves = list(board.legal_moves)
     if not legal_moves:
         return None
 
-    # Polyglot book
-    if os.path.exists(uci_options.get("BookPath", "")):
-        try:
-            with chess.polyglot.open_reader(uci_options["BookPath"]) as reader:
-                entry = reader.weighted_choice(board)
-                return entry.move
-        except Exception:
-            pass
+    try:
+        with chess.polyglot.open_reader(uci_options["BookPath"]) as reader:
+            entry = reader.weighted_choice(board)
+            return entry.move
+    except:
+        pass
 
-    # Syzygy tablebase
-    if os.path.exists(uci_options.get("SyzygyPath", "")):
-        try:
-            with chess.syzygy.open_tablebase(uci_options["SyzygyPath"]) as syzygy:
-                if board.is_valid() and syzygy.probe_wdl(board) is not None:
-                    move = syzygy.probe_dtz(board)[1]
-                    if move in board.legal_moves:
-                        return move
-        except Exception:
-            pass
+    try:
+        with chess.syzygy.open_tablebase(uci_options["SyzygyPath"]) as syzygy:
+            if board.is_valid() and syzygy.probe_wdl(board) is not None:
+                move = syzygy.probe_dtz(board)[1]
+                if move in board.legal_moves:
+                    return move
+    except:
+        pass
 
-    best_move = random.choice(legal_moves)  # Fallback
-
+    best_move = random.choice(legal_moves)
     try:
         for d in range(1, max_depth + 1):
             alpha = -MATE_VALUE
@@ -538,10 +526,6 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
                 board.push(move)
                 try:
                     score = -pvs(board, d - 1, -beta, -alpha, start_time, max_time)
-                    if score <= alpha or score >= beta:
-                        alpha = -MATE_VALUE
-                        beta = MATE_VALUE
-                        score = -alpha_beta(board, d - 1, -beta, -alpha, start_time, max_time)
                 finally:
                     board.pop()
 
@@ -549,27 +533,21 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
                     best_score = score
                     best_move = move
                     if abs(best_score) >= MATE_VALUE - 100:
-                       mate_in = (MATE_VALUE - abs(best_score)) // 2
-                       mate_sign = -1 if best_score < 0 else 1
-                       print(f"info depth {d} score mate {mate_sign * mate_in} pv {move.uci()}")
+                        mate_in = (MATE_VALUE - abs(best_score)) // 2
+                        print(f"info depth {d} score mate {mate_in if best_score > 0 else -mate_in} pv {move.uci()}")
                     else:
-                       print(f"info depth {d} score cp {best_score} pv {move.uci()}")
+                        print(f"info depth {d} score cp {best_score} pv {move.uci()}")
 
-                if best_score >= MATE_VALUE - 100:
-                    return best_move
-
-            if time.time() - start_time > max_time * 0.9:
-                break
+                if time.time() - start_time > max_time * 0.9:
+                    break
     except TimeoutError:
         pass
     except Exception as e:
-        logger.exception("Exception in search")
+        logger.exception("Exception in choose_best_move")
 
-    if not best_move and legal_moves:
-        best_move = random.choice(legal_moves)
     return best_move
 
-
+# --- Main UCI Loop ---
 def main():
     board = chess.Board()
     while True:
@@ -578,18 +556,20 @@ def main():
             if not line:
                 break
             line = line.strip()
+
             if line == "uci":
                 print("id name SupraTapered")
                 print("id author Suprateem")
-                print("option name Threads type spin default 1 min 1 max 128")
-                print("option name Hash type spin default 128 min 1 max 1024")
-                print("option name Move Overhead type spin default 100 min 0 max 5000")
-                print("option name Max Nodes type spin default 0 min 0 max 10000000")
-                print("option name BookPath type string default book.bin")
-                print("option name SyzygyPath type string default syzygy")
+                for name, default in uci_options.items():
+                    if isinstance(default, int):
+                        print(f"option name {name} type spin default {default} min 0 max 10000000")
+                    else:
+                        print(f"option name {name} type string default {default}")
                 print("uciok")
+
             elif line == "isready":
                 print("readyok")
+
             elif line.startswith("setoption"):
                 parts = line.split()
                 if "name" in parts and "value" in parts:
@@ -597,12 +577,10 @@ def main():
                     value = " ".join(parts[parts.index("value") + 1:])
                     if name in uci_options:
                         try:
-                            if name in ["BookPath", "SyzygyPath"]:
-                                uci_options[name] = value
-                            else:
-                                uci_options[name] = int(value)
-                        except ValueError:
+                            uci_options[name] = int(value) if name not in ["BookPath", "SyzygyPath"] else value
+                        except:
                             pass
+
             elif line.startswith("position"):
                 parts = line.split()
                 if "startpos" in parts:
@@ -617,51 +595,27 @@ def main():
                     if "moves" in parts:
                         for mv in parts[parts.index("moves") + 1:]:
                             board.push_uci(mv)
-                elif line.startswith("go"):
-    tokens = line.split()
-    wtime = btime = winc = binc = movestogo = None
 
-    if "wtime" in tokens:
-        try:
-            wtime = int(tokens[tokens.index("wtime") + 1])
-        except:
-            pass
-    if "btime" in tokens:
-        try:
-            btime = int(tokens[tokens.index("btime") + 1])
-        except:
-            pass
-    if "winc" in tokens:
-        try:
-            winc = int(tokens[tokens.index("winc") + 1])
-        except:
-            pass
-    if "binc" in tokens:
-        try:
-            binc = int(tokens[tokens.index("binc") + 1])
-        except:
-            pass
-    if "movestogo" in tokens:
-        try:
-            movestogo = int(tokens[tokens.index("movestogo") + 1])
-        except:
-            pass
+            elif line.startswith("go"):
+                tokens = line.split()
+                wtime = btime = winc = binc = movestogo = None
+                try:
+                    if "wtime" in tokens:
+                        wtime = int(tokens[tokens.index("wtime") + 1])
+                    if "btime" in tokens:
+                        btime = int(tokens[tokens.index("btime") + 1])
+                    if "winc" in tokens:
+                        winc = int(tokens[tokens.index("winc") + 1])
+                    if "binc" in tokens:
+                        binc = int(tokens[tokens.index("binc") + 1])
+                    if "movestogo" in tokens:
+                        movestogo = int(tokens[tokens.index("movestogo") + 1])
+                except:
+                    pass
 
-    try:
-        move = choose_best_move(board, wtime=wtime, btime=btime, winc=winc, binc=binc, moves_to_go=movestogo)
-    except Exception as e:
-        logger.exception("Error in choose_best_move")
-        move = None
+                move = choose_best_move(board, wtime=wtime, btime=btime, winc=winc, binc=binc, moves_to_go=movestogo)
+                print("bestmove", move.uci() if move else "0000")
 
-    if move and isinstance(move, chess.Move):
-        print("bestmove", move.uci())
-    else:
-        legal_moves = list(board.legal_moves)
-        if legal_moves:
-            print("bestmove", legal_moves[0].uci())
-        else:
-            print("bestmove 0000")
-                break
             sys.stdout.flush()
         except Exception as e:
             logger.exception("Exception in main loop")
@@ -671,7 +625,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        import logging
-        logging.exception("Engine crashed")
+        logger.exception("Engine crashed")
         print(f"info string Engine error: {e}")
         sys.exit(1)
