@@ -488,8 +488,6 @@ def calculate_time_limit(wtime, btime, winc, binc, moves_to_go, board):
 def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=None, moves_to_go=None):
     global node_count
     node_count = 0
-    best_move = None
-    best_score = None
     start_time = time.time()
     max_time = calculate_time_limit(wtime, btime, winc, binc, moves_to_go, board)
     max_depth = depth or MAX_DEPTH
@@ -513,33 +511,48 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
     except:
         pass
 
-    best_move = random.choice(legal_moves)
+    best_move = None
+    best_score = None
+
     try:
         for d in range(1, max_depth + 1):
             alpha = -MATE_VALUE
             beta = MATE_VALUE
+
             if best_score is not None and d >= 4:
                 alpha = best_score - ASPIRATION_WINDOW
                 beta = best_score + ASPIRATION_WINDOW
 
-            for move in legal_moves:
-                board.push(move)
-                try:
-                    score = -pvs(board, d - 1, -beta, -alpha, start_time, max_time)
-                finally:
-                    board.pop()
+            score = -pvs(board, d, -beta, -alpha, start_time, max_time)
 
-                if best_score is None or score > best_score:
-                    best_score = score
-                    best_move = move
-                    if abs(best_score) >= MATE_VALUE - 100:
-                        mate_in = (MATE_VALUE - abs(best_score)) // 2
-                        print(f"info depth {d} score mate {mate_in if best_score > 0 else -mate_in} pv {move.uci()}")
-                    else:
-                        print(f"info depth {d} score cp {best_score} pv {move.uci()}")
+            # Try to get the best move from the TT
+            tt_entry = transposition_table.get(compute_zobrist_key(board))
+            if tt_entry and tt_entry.best_move in board.legal_moves:
+                best_move = tt_entry.best_move
+                best_score = score
+            else:
+                # Fallback: search best among all legal moves manually at this depth
+                for move in legal_moves:
+                    board.push(move)
+                    try:
+                        move_score = -pvs(board, d - 1, -beta, -alpha, start_time, max_time)
+                    finally:
+                        board.pop()
+                    if best_score is None or move_score > best_score:
+                        best_score = move_score
+                        best_move = move
 
-                if time.time() - start_time > max_time * 0.9:
-                    break
+            # Output PV info
+            if best_score is not None:
+                if abs(best_score) >= MATE_VALUE - 100:
+                    mate_in = (MATE_VALUE - abs(best_score)) // 2 + 1
+                    print(f"info depth {d} score mate {mate_in if best_score > 0 else -mate_in} pv {best_move.uci()}")
+                else:
+                    print(f"info depth {d} score cp {best_score} pv {best_move.uci()}")
+
+            if time.time() - start_time > max_time * 0.9:
+                break
+
     except TimeoutError:
         pass
     except Exception as e:
