@@ -471,21 +471,33 @@ def pvs(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
 
 
 # === Updated Move Selection with Aspiration Windows ===
-def choose_best_move(board, depth=None, wtime=None, btime=None):
+def calculate_time_limit(wtime, btime, winc, binc, moves_to_go, board):
+    base_time = wtime if board.turn == chess.WHITE else btime
+    increment = winc if board.turn == chess.WHITE else binc
+
+    if base_time is None:
+        return TIME_LIMIT
+
+    base_time = max(0, base_time)
+    increment = increment or 0
+    moves_remaining = moves_to_go or 30  # Fallback if not provided
+
+    # Use 90% of available time
+    safe_time = base_time * 0.9
+    time_per_move = safe_time / moves_remaining + increment * 0.5
+
+    return max(0.05, min(time_per_move / 1000.0, 10.0))  # Clamp in seconds
+
+
+def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=None, moves_to_go=None):
     global node_count
     node_count = 0
     best_move = None
-    start_time = time.time()
-    max_time = TIME_LIMIT
     best_score = None
+    start_time = time.time()
 
-    # Adjust time control
-    if wtime and board.turn == chess.WHITE:
-        max_time = min(max_time, wtime / 1000.0 - 0.1)
-    elif btime and board.turn == chess.BLACK:
-        max_time = min(max_time, btime / 1000.0 - 0.1)
-    if max_time < 0.05:
-        max_time = 0.05
+    # Improved time control
+    max_time = calculate_time_limit(wtime, btime, winc, binc, moves_to_go, board)
 
     max_depth = depth or MAX_DEPTH
     legal_moves = list(board.legal_moves)
@@ -536,6 +548,12 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
                 if best_score is None or score > best_score:
                     best_score = score
                     best_move = move
+                    if abs(best_score) >= MATE_VALUE - 100:
+                       mate_in = (MATE_VALUE - abs(best_score)) // 2
+                       mate_sign = -1 if best_score < 0 else 1
+                       print(f"info depth {d} score mate {mate_sign * mate_in} pv {move.uci()}")
+                    else:
+                       print(f"info depth {d} score cp {best_score} pv {move.uci()}")
 
                 if best_score >= MATE_VALUE - 100:
                     return best_move
@@ -599,33 +617,50 @@ def main():
                     if "moves" in parts:
                         for mv in parts[parts.index("moves") + 1:]:
                             board.push_uci(mv)
-            elif line.startswith("go"):
-                tokens = line.split()
-                wtime = btime = None
-                if "wtime" in tokens:
-                    try:
-                        wtime = int(tokens[tokens.index("wtime") + 1])
-                    except:
-                        pass
-                if "btime" in tokens:
-                    try:
-                        btime = int(tokens[tokens.index("btime") + 1])
-                    except:
-                        pass
-                try:
-                    move = choose_best_move(board, wtime=wtime, btime=btime)
-                except Exception as e:
-                    logger.exception("Error in choose_best_move")
-                    move = None
-                if move and isinstance(move, chess.Move):
-                    print("bestmove", move.uci())
-                else:
-                    legal_moves = list(board.legal_moves)
-                    if legal_moves:
-                        print("bestmove", legal_moves[0].uci())
-                    else:
-                        print("bestmove 0000")
-            elif line == "quit":
+                elif line.startswith("go"):
+    tokens = line.split()
+    wtime = btime = winc = binc = movestogo = None
+
+    if "wtime" in tokens:
+        try:
+            wtime = int(tokens[tokens.index("wtime") + 1])
+        except:
+            pass
+    if "btime" in tokens:
+        try:
+            btime = int(tokens[tokens.index("btime") + 1])
+        except:
+            pass
+    if "winc" in tokens:
+        try:
+            winc = int(tokens[tokens.index("winc") + 1])
+        except:
+            pass
+    if "binc" in tokens:
+        try:
+            binc = int(tokens[tokens.index("binc") + 1])
+        except:
+            pass
+    if "movestogo" in tokens:
+        try:
+            movestogo = int(tokens[tokens.index("movestogo") + 1])
+        except:
+            pass
+
+    try:
+        move = choose_best_move(board, wtime=wtime, btime=btime, winc=winc, binc=binc, moves_to_go=movestogo)
+    except Exception as e:
+        logger.exception("Error in choose_best_move")
+        move = None
+
+    if move and isinstance(move, chess.Move):
+        print("bestmove", move.uci())
+    else:
+        legal_moves = list(board.legal_moves)
+        if legal_moves:
+            print("bestmove", legal_moves[0].uci())
+        else:
+            print("bestmove 0000")
                 break
             sys.stdout.flush()
         except Exception as e:
