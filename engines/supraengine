@@ -314,14 +314,12 @@ def quiescence(board, alpha, beta):
                 alpha = score
     return alpha
 
-
-# === Updated Alpha-Beta with Transposition Table ===
-def alpha_beta(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
+def pvs(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
     global node_count
     if time.time() - start_time > max_time:
         raise TimeoutError
-    
-    # Check transposition table
+
+    # Transposition Table Lookup
     zobrist_key = compute_zobrist_key(board)
     tt_entry = transposition_table.get(zobrist_key)
     if tt_entry and tt_entry.depth >= depth:
@@ -333,73 +331,92 @@ def alpha_beta(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=
             beta = min(beta, tt_entry.score)
         if alpha >= beta:
             return tt_entry.score
-    
+
+    # Terminal condition
     if depth == 0:
         return quiescence(board, alpha, beta)
-    
+
+    # Repetition / 50-move / Insufficient material
+    if board.is_repetition(3) or board.halfmove_clock >= 100 or board.is_insufficient_material():
+        return 0
+
     # Null move pruning
     if can_null and depth >= 3 and not board.is_check():
         board.push(chess.Move.null())
-        score = -alpha_beta(board, depth - NULL_MOVE_REDUCTION - 1, -beta, -beta + 1, start_time, max_time, ply + 1, False)
+        score = -pvs(board, depth - 1 - NULL_MOVE_REDUCTION, -beta, -beta + 1, start_time, max_time, ply + 1, False)
         board.pop()
         if score >= beta:
             return beta
-    
-    # Futility pruning
+
+    # Futility pruning at depth 1
     if depth == 1 and not board.is_check() and evaluate(board) + FUTILITY_MARGIN < alpha:
         return alpha
-    
-    pv_move = tt_entry.best_move if tt_entry else principal_variation.get(board.fen(), None)
-    moves = list(board.legal_moves)
-    moves = order_moves(board, moves, pv_move, depth, ply)
-    
-    best_score = -float('inf')
+
+    # Razoring at low depth
+    if depth <= 2 and not board.is_check():
+        static_eval = evaluate(board)
+        if static_eval + RAZOR_MARGIN < alpha:
+            return quiescence(board, alpha, beta)
+
+    best_score = -MATE_VALUE
     best_move = None
+
+    pv_move = tt_entry.best_move if tt_entry else principal_variation.get(board.fen(), None)
+    moves = order_moves(board, list(board.legal_moves), pv_move, depth, ply)
+
+    # ProbCut before normal search
+    if depth >= 4:
+        for move in moves:
+            if board.is_capture(move) and static_exchange_eval(board, move) > 0:
+                board.push(move)
+                score = -pvs(board, depth - PROBCUT_DEPTH, -beta - PROBCUT_MARGIN, -beta - 1, start_time, max_time, ply + 1)
+                board.pop()
+                if score >= beta:
+                    return beta
+                break
+
     for i, move in enumerate(moves):
+        # Late Move Pruning
+        if depth <= 3 and i >= 4 and not board.is_capture(move) and not board.gives_check():
+            continue
+
         board.push(move)
         node_count += 1
-        
-        # Late Move Reduction
-        if i >= 3 and depth >= 3 and not board.is_capture(move) and not board.gives_check():
-            reduction = max(0, int(math.log(i) * LMR_BASE / LMR_DIVISOR) - 1)
-            reduced_depth = max(1, depth - 1 - reduction)
-            score = -alpha_beta(board, reduced_depth, -beta, -alpha, start_time, max_time, ply + 1)
+
+        if i == 0:
+            score = -pvs(board, depth - 1, -beta, -alpha, start_time, max_time, ply + 1)
         else:
-            score = -alpha_beta(board, depth - 1, -beta, -alpha, start_time, max_time, ply + 1)
-        
+            score = -pvs(board, depth - 1, -alpha - 1, -alpha, start_time, max_time, ply + 1)
+            if alpha < score < beta:
+                score = -pvs(board, depth - 1, -beta, -score, start_time, max_time, ply + 1)
+
         board.pop()
-        
+
         if score > best_score:
             best_score = score
             best_move = move
             if score > alpha:
                 alpha = score
                 if alpha >= beta:
-                    # Store in TT
-                    transposition_table[zobrist_key] = TTEntry(
-                        zobrist_key, depth, alpha, 'LOWER', best_move
-                    )
-                    # Update killer and history
+                    # Store in TT and update heuristics
+                    transposition_table[zobrist_key] = TTEntry(zobrist_key, depth, alpha, 'LOWER', best_move)
                     if not board.is_capture(move):
-                        killer_moves[ply][1] = killer_moves[ply][0]
-                        killer_moves[ply][0] = move
-                        history_heuristic[(move.from_square, move.to_square)] = (
+                        if ply < len(killer_moves):
+                            killer_moves[ply][1] = killer_moves[ply][0]
+                            killer_moves[ply][0] = move
+                        history_heuristic[(move.from_square, move.to_square)] = \
                             history_heuristic.get((move.from_square, move.to_square), 0) + depth * depth
-                        )
                         if board.move_stack:
-                            last_move = board.peek().uci()
-                            counter_moves[last_move] = [move]
+                            counter_moves[board.peek().uci()] = [move]
                     break
-    
-    # Store in TT
+
     if best_move:
         bound = 'EXACT' if alpha < best_score < beta else ('LOWER' if best_score >= beta else 'UPPER')
-        transposition_table[zobrist_key] = TTEntry(
-            zobrist_key, depth, best_score, bound, best_move
-        )
+        transposition_table[zobrist_key] = TTEntry(zobrist_key, depth, best_score, bound, best_move)
         principal_variation[board.fen()] = best_move
-    
+
     return best_score
+
 
 # === Updated Move Selection with Aspiration Windows ===
 def choose_best_move(board, depth=None, wtime=None, btime=None):
@@ -456,7 +473,7 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
             for move in legal_moves:
                 board.push(move)
                 try:
-                    score = -alpha_beta(board, d - 1, -beta, -alpha, start_time, max_time)
+                    score = -pvs(board, d - 1, -beta, -alpha, start_time, max_time)
                     if score <= alpha or score >= beta:
                         alpha = -MATE_VALUE
                         beta = MATE_VALUE
