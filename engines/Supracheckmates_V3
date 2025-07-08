@@ -229,10 +229,69 @@ PASSED_PAWN = [[0, 10, 30, 50, 75, 100, 150], [0, 20, 40, 70, 120, 200, 300]]
 # The rest of the code remains unchanged from previous implementation.
 # === Static Exchange Evaluation ===
 def static_exchange_eval(board, move):
+    """
+    Full Static Exchange Evaluation (SEE): recursively evaluates material outcome
+    of a capture sequence on move.to_square.
+    """
     if not board.is_capture(move):
         return 0
-    victim_value = PIECE_VALUES.get(board.piece_type_at(move.to_square), [0])[0]
-    return victim_value
+
+    target_square = move.to_square
+    gain = []
+    attackers = {chess.WHITE: set(), chess.BLACK: set()}
+
+    # Fill attackers
+    for color in [chess.WHITE, chess.BLACK]:
+        for square in board.attackers(color, target_square):
+            attackers[color].add(square)
+
+    # Get value of captured piece
+    captured_piece = board.piece_at(target_square)
+    if not captured_piece:
+        return 0
+    gain.append(PIECE_VALUES[captured_piece.piece_type][0])
+
+    # Simulate capture
+    board.push(move)
+    us = not board.turn  # The side that made the last move
+    side = us
+    last_captured = board.piece_at(target_square)
+
+    def next_attacker(side):
+        min_value = float("inf")
+        next_sq = None
+        for sq in attackers[side]:
+            piece = board.piece_at(sq)
+            if piece:
+                value = PIECE_VALUES[piece.piece_type][0]
+                if value < min_value:
+                    min_value = value
+                    next_sq = sq
+        return next_sq
+
+    while True:
+        sq = next_attacker(side)
+        if sq is None:
+            break
+
+        piece = board.piece_at(sq)
+        if not piece:
+            attackers[side].remove(sq)
+            continue
+
+        gain_value = PIECE_VALUES[piece.piece_type][0]
+        gain.append(gain_value - gain[-1])
+
+        # Simulate capture
+        board.remove_piece_at(sq)
+        side = not side
+
+    board.pop()
+    # Perform backward minimax over gain list
+    for i in range(len(gain) - 2, -1, -1):
+        gain[i] = max(-gain[i + 1], gain[i])
+
+    return gain[0]
 
 # === Move Ordering ===
 def score_move(board, move, pv_move, depth, ply):
