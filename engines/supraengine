@@ -229,10 +229,62 @@ PASSED_PAWN = [[0, 10, 30, 50, 75, 100, 150], [0, 20, 40, 70, 120, 200, 300]]
 # The rest of the code remains unchanged from previous implementation.
 # === Static Exchange Evaluation ===
 def static_exchange_eval(board, move):
-    if not board.is_capture(move):
-        return 0
-    victim_value = PIECE_VALUES.get(board.piece_type_at(move.to_square), [0])[0]
-    return victim_value
+    to_sq = move.to_square
+    from_sq = move.from_square
+    color = board.color_at(from_sq)
+    opposite = not color
+
+    # All attackers to the target square
+    attackers = board.attackers(chess.WHITE, to_sq) | board.attackers(chess.BLACK, to_sq)
+    occupied = board.occupied
+
+    # Piece values for sorting
+    piece_values = {
+        chess.PAWN: 100, chess.KNIGHT: 320, chess.BISHOP: 330,
+        chess.ROOK: 500, chess.QUEEN: 900, chess.KING: 20000
+    }
+
+    # Track material gain/loss
+    gain = []
+
+    def see_rec(current_color, occ, atk, captured_value, depth=0):
+        if not atk:
+            return 0
+
+        min_attacker = None
+        min_value = float('inf')
+        for sq in atk:
+            piece = board.piece_at(sq)
+            val = piece_values.get(piece.piece_type, 0)
+            if val < min_value:
+                min_value = val
+                min_attacker = sq
+
+        if not min_attacker:
+            return 0
+
+        gain_score = captured_value
+
+        # Remove attacker and simulate capture
+        occ ^= chess.BB_SQUARES[min_attacker]
+        atk = board.attackers(chess.WHITE, to_sq, occ) | board.attackers(chess.BLACK, to_sq, occ)
+        next_color = not current_color
+
+        gain_next = see_rec(next_color, occ, atk, min_value, depth + 1)
+
+        net = gain_score - gain_next
+        return max(0, net)  # We don’t want to lose material
+
+    # Start SEE from this position
+    piece_captured = board.piece_type_at(to_sq)
+    captured_value = PIECE_VALUES.get(piece_captured, [0])[0]
+
+    # Remove the moving piece from attackers and simulate its move
+    simulated_occ = board.occupied ^ chess.BB_SQUARES[from_sq]
+    remaining_attackers = attackers - {from_sq}
+
+    return see_rec(opposite, simulated_occ, remaining_attackers, captured_value)
+
 
 # === Move Ordering ===
 def score_move(board, move, pv_move, depth, ply):
