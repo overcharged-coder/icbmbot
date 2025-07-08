@@ -238,12 +238,6 @@ def static_exchange_eval(board, move):
 
     target_square = move.to_square
     gain = []
-    attackers = {chess.WHITE: set(), chess.BLACK: set()}
-
-    # Fill attackers
-    for color in [chess.WHITE, chess.BLACK]:
-        for square in board.attackers(color, target_square):
-            attackers[color].add(square)
 
     # Get value of captured piece
     captured_piece = board.piece_at(target_square)
@@ -251,26 +245,33 @@ def static_exchange_eval(board, move):
         return 0
     gain.append(PIECE_VALUES[captured_piece.piece_type][0])
 
-    # Simulate capture
-    board.push(move)
-    us = not board.turn  # The side that made the last move
-    side = us
-    last_captured = board.piece_at(target_square)
+    # Track attackers
+    attackers = {chess.WHITE: set(), chess.BLACK: set()}
+    for color in [chess.WHITE, chess.BLACK]:
+        for sq in board.attackers(color, target_square):
+            attackers[color].add(sq)
 
-    def next_attacker(side):
-        min_value = float("inf")
-        next_sq = None
+    # Apply the first move
+    board.push(move)
+    us = not board.turn  # The side that made the move
+    side = us
+
+    def next_attacker(side, occupied):
+        min_val = float("inf")
+        candidate = None
         for sq in attackers[side]:
             piece = board.piece_at(sq)
-            if piece:
-                value = PIECE_VALUES[piece.piece_type][0]
-                if value < min_value:
-                    min_value = value
-                    next_sq = sq
-        return next_sq
+            if piece and chess.BB_SQUARES[sq] & occupied:
+                val = PIECE_VALUES[piece.piece_type][0]
+                if val < min_val:
+                    min_val = val
+                    candidate = sq
+        return candidate
 
+    # Simulate captures recursively
+    occupied = board.occupied_co[chess.WHITE] | board.occupied_co[chess.BLACK]
     while True:
-        sq = next_attacker(side)
+        sq = next_attacker(side, occupied)
         if sq is None:
             break
 
@@ -279,15 +280,14 @@ def static_exchange_eval(board, move):
             attackers[side].remove(sq)
             continue
 
-        gain_value = PIECE_VALUES[piece.piece_type][0]
-        gain.append(gain_value - gain[-1])
-
-        # Simulate capture
-        board.remove_piece_at(sq)
+        gain.append(PIECE_VALUES[piece.piece_type][0] - gain[-1])
+        occupied ^= chess.BB_SQUARES[sq]
+        attackers[side].remove(sq)
         side = not side
 
     board.pop()
-    # Perform backward minimax over gain list
+
+    # Backward minimax over gain list
     for i in range(len(gain) - 2, -1, -1):
         gain[i] = max(-gain[i + 1], gain[i])
 
