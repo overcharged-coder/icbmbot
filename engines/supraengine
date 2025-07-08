@@ -560,40 +560,46 @@ def main():
             if line == "uci":
                 print("id name SupraTapered")
                 print("id author Suprateem")
-                for name, default in uci_options.items():
-                    if isinstance(default, int):
-                        print(f"option name {name} type spin default {default} min 0 max 10000000")
-                    else:
-                        print(f"option name {name} type string default {default}")
+                print("option name Threads type spin default 1 min 1 max 128")
+                print("option name Hash type spin default 128 min 1 max 1024")
+                print("option name Move Overhead type spin default 100 min 0 max 5000")
+                print("option name Max Nodes type spin default 0 min 0 max 10000000")
+                print("option name BookPath type string default book.bin")
+                print("option name SyzygyPath type string default syzygy")
                 print("uciok")
 
             elif line == "isready":
                 print("readyok")
 
             elif line.startswith("setoption"):
-                parts = line.split()
-                if "name" in parts and "value" in parts:
-                    name = parts[parts.index("name") + 1]
-                    value = " ".join(parts[parts.index("value") + 1:])
+                parts = line.split("name", 1)[-1].strip().split("value")
+                if len(parts) == 2:
+                    name = parts[0].strip()
+                    value = parts[1].strip()
                     if name in uci_options:
                         try:
-                            uci_options[name] = int(value) if name not in ["BookPath", "SyzygyPath"] else value
-                        except:
+                            if name in ["BookPath", "SyzygyPath"]:
+                                uci_options[name] = value
+                            else:
+                                uci_options[name] = int(value)
+                        except ValueError:
                             pass
 
             elif line.startswith("position"):
                 parts = line.split()
                 if "startpos" in parts:
                     board.reset()
-                    if "moves" in parts:
-                        for mv in parts[parts.index("moves") + 1:]:
+                    moves_index = parts.index("moves") + 1 if "moves" in parts else None
+                    if moves_index:
+                        for mv in parts[moves_index:]:
                             board.push_uci(mv)
                 elif "fen" in parts:
                     idx = parts.index("fen")
                     fen = " ".join(parts[idx + 1:idx + 7])
                     board.set_fen(fen)
-                    if "moves" in parts:
-                        for mv in parts[parts.index("moves") + 1:]:
+                    moves_index = parts.index("moves") + 1 if "moves" in parts else None
+                    if moves_index:
+                        for mv in parts[moves_index:]:
                             board.push_uci(mv)
 
             elif line.startswith("go"):
@@ -610,11 +616,14 @@ def main():
                         binc = int(tokens[tokens.index("binc") + 1])
                     if "movestogo" in tokens:
                         movestogo = int(tokens[tokens.index("movestogo") + 1])
-                except:
+                except (ValueError, IndexError):
                     pass
 
                 move = choose_best_move(board, wtime=wtime, btime=btime, winc=winc, binc=binc, moves_to_go=movestogo)
                 print("bestmove", move.uci() if move else "0000")
+
+            elif line == "quit":
+                break
 
             sys.stdout.flush()
         except Exception as e:
