@@ -33,7 +33,7 @@ engines:
     #  nodes: 5000000
   humans:
     dir: "./engines"
-    name: "Supracheckmates_V3"
+    name: "fairy-stockfish_x86-64-bmi2"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 1.0
