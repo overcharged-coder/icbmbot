@@ -9,7 +9,7 @@ engines:
     move_overhead_multiplier: 10.0
     uci_options:
       Threads: 4
-      Hash: 3512
+      Hash: 2512
       Move Overhead: 160
     limits:
       # time: 20.0
@@ -45,7 +45,28 @@ engines:
      # time: 20.0
       #depth: 50
     #  nodes: 5000000
-
+  bullet:
+    dir: "./engines"
+    name: "stockfish-ubuntu-x86-64-avx2"
+    ponder: true
+    silence_stderr: false
+    move_overhead_multiplier: 20.0
+    uci_options:
+       Threads: 4
+       Hash: 1024
+       Move Overhead: 100
+    limits: 
+  chess960:
+    dir: "./engines"
+    name: "stockfish-ubuntu-x86-64-avx2"
+    ponder: true
+    silence_stderr: false
+    move_overhead_multiplier: 20.0
+    uci_options:
+       Threads: 4
+       Hash: 256
+       Move Overhead: 100
+    limits: 
 
 
 syzygy:
