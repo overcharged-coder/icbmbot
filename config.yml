@@ -220,7 +220,8 @@ whitelist:
   - Supratsa
   - Shresthmah
 blacklist:
-  - eNErGyOFbEiNGbOT
+ # - eNErGyOFbEiNGbOT
+  - VEER-OMEGA-BOT
 books:
   Titans: "./engines/black.bin"
   optimus2502: "./engines/OPTIMUS2502.bin"
