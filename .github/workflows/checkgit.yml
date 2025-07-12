@@ -1,0 +1,24 @@
+name: Check AVX-512 Support
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-avx:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Show CPU Information (lscpu)
+        run: lscpu
+
+      - name: Check AVX Flags in /proc/cpuinfo
+        run: |
+          echo "AVX-related flags:"
+          grep -m1 '^flags' /proc/cpuinfo | tr ' ' '\n' | grep avx
+
+      - name: Check /proc/cpuinfo Full
+        run: |
+          echo "Full /proc/cpuinfo (first CPU):"
+          grep -A20 -m1 '^processor' /proc/cpuinfo
