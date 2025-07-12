@@ -33,10 +33,10 @@ engines:
     #  nodes: 5000000
   humans:
     dir: "./engines"
-    name: "fairy-stockfish_x86-64-bmi2"
+    name: "Supracheckmates_V3"
     ponder: false
     silence_stderr: false
-    move_overhead_multiplier: 1.0
+    move_overhead_multiplier: 10.0
     uci_options:
       Threads: 4
       Hash: 50
