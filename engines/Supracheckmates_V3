@@ -320,22 +320,65 @@ def interpolate(mg, eg, phase):
 
 def king_safety(board, color):
     king_sq = board.king(color)
+    if king_sq is None:
+        return -10000  # king is missing
+
     penalty = 0
 
-    # Count attackers in king zone
+    # 1. Check attackers in the king's zone
     zone = chess.SquareSet(chess.BB_KING_ATTACKS[king_sq])
     attackers = sum(1 for sq in zone if board.is_attacked_by(not color, sq))
     penalty -= 15 * attackers
 
-    # Pawn shield
-    if color == chess.WHITE:
-        for sq in [king_sq - 8, king_sq - 9, king_sq - 7]:
-            if not board.piece_at(sq) or board.piece_at(sq).piece_type != chess.PAWN:
+    # 2. Missing pawn shield (files: f, g, h for kingside; c, b, a for queenside)
+    rank_direction = -8 if color == chess.WHITE else 8
+    for offset in [rank_direction, rank_direction - 1, rank_direction + 1]:
+        sq = king_sq + offset
+        if sq in chess.SQUARES:
+            piece = board.piece_at(sq)
+            if not piece or piece.piece_type != chess.PAWN or piece.color != color:
                 penalty -= 10
-    else:
-        for sq in [king_sq + 8, king_sq + 9, king_sq + 7]:
-            if not board.piece_at(sq) or board.piece_at(sq).piece_type != chess.PAWN:
+
+    # 3. Open/semi-open files near king
+    king_file = chess.square_file(king_sq)
+    for df in [-1, 0, 1]:  # adjacent files
+        file = king_file + df
+        if 0 <= file <= 7:
+            pawns = [sq for sq in chess.SQUARES if chess.square_file(sq) == file and board.piece_at(sq) == chess.Piece(chess.PAWN, color)]
+            if not pawns:
+                penalty -= 12  # open file
+            elif len(pawns) == 1:
+                penalty -= 6  # semi-open
+
+    # 4. Penalize if king is uncastled (still on e1/e8) and not protected
+    if color == chess.WHITE and king_sq == chess.E1:
+        penalty -= 10
+    elif color == chess.BLACK and king_sq == chess.E8:
+        penalty -= 10
+
+    # 5. Tactical threats: pins, skewers, x-rays
+    for square in chess.SQUARES:
+        piece = board.piece_at(square)
+        if piece and piece.color == color:
+            # Check if this piece is pinned
+            if board.is_pinned(color, square):
                 penalty -= 10
+            # X-ray attacks and skewers
+            for attacker_sq in board.attackers(not color, square):
+                attacker = board.piece_at(attacker_sq)
+                if attacker and attacker.piece_type in [chess.QUEEN, chess.ROOK, chess.BISHOP]:
+                    # Check for a piece behind
+                    line = board.trace(attacker_sq, square)
+                    if line:
+                        behind_sq = line[-1]
+                        behind_piece = board.piece_at(behind_sq)
+                        if behind_piece and behind_piece.color == color:
+                            penalty -= 8  # potential x-ray or skewer
+            # Cross-pins (rarer, simplified as overlapping pins)
+            if board.is_pinned(color, square):
+                for dir_pin in [chess.BB_DIAGONALS[square], chess.BB_FILES[chess.square_file(square)], chess.BB_RANKS[chess.square_rank(square)]]:
+                    if king_sq in dir_pin:
+                        penalty -= 5  # pin direction toward king
 
     return penalty
 
