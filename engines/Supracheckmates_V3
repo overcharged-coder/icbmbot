@@ -392,6 +392,65 @@ def evaluate_pawn_structure(board, color, pawn_hash):
         score += PASSED_PAWN[color][min(rank, 6)]
     pawn_hash[hash_key] = score
     return score
+def tactical_threat_score(board, color):
+    score = 0
+    their_color = not color
+    pieces = board.piece_map()
+
+    for sq, piece in pieces.items():
+        if piece.color != color:
+            continue
+
+        attackers = board.attacks(sq)
+        for target in attackers:
+            target_piece = board.piece_at(target)
+
+            if target_piece and target_piece.color == their_color:
+                # Good capture (SEE > 0)
+                see = static_exchange_eval(board, chess.Move(sq, target))
+                if see > 0:
+                    score += see // 2
+
+                # Skewer
+                between = chess.SquareSet(chess.BB_BETWEEN[sq][target]) & board.occupied
+                if len(between) == 1:
+                    behind_sq = list(between)[0]
+                    behind_piece = board.piece_at(behind_sq)
+                    if behind_piece and behind_piece.color == their_color:
+                        front_val = PIECE_VALUES[target_piece.piece_type][0]
+                        behind_val = PIECE_VALUES[behind_piece.piece_type][0]
+                        if behind_val > front_val:
+                            score += (behind_val - front_val) // 2
+
+                # Pin detection
+                if board.is_pinned(their_color, target):
+                    score += PIECE_VALUES[target_piece.piece_type][0] // 2
+
+            elif not target_piece and not board.is_attacked_by(their_color, target):
+                # Hanging square (undefended)
+                score += 10
+
+        # X-ray check or discovery
+        if piece.piece_type in [chess.BISHOP, chess.ROOK, chess.QUEEN]:
+            line = board.attacks(sq)
+            blockers = [t for t in line if board.piece_at(t)]
+            if len(blockers) == 1:
+                blocker_sq = blockers[0]
+                blocker_piece = board.piece_at(blocker_sq)
+                if blocker_piece and blocker_piece.color == their_color:
+                    move = chess.Move(sq, blocker_sq)
+                    if board.is_legal(move):
+                        board.push(move)
+                        if board.is_check():
+                            score += 30
+                        board.pop()
+
+        # Forks (not just knight)
+        fork_targets = [t for t in board.attacks(sq) if board.piece_at(t) and board.piece_at(t).color == their_color and PIECE_VALUES[board.piece_at(t).piece_type][0] >= 300]
+        if len(fork_targets) >= 2:
+            score += 50
+
+    return score
 
 def evaluate(board):
     phase = game_phase(board)
@@ -409,6 +468,9 @@ def evaluate(board):
     score -= evaluate_pawn_structure(board, chess.BLACK, pawn_hash_table)
     score += king_safety(board, chess.WHITE)
     score -= king_safety(board, chess.BLACK)
+    score += tactical_threat_score(board, board.turn)
+    score -= tactical_threat_score(board, not board.turn)
+
     return score if board.turn == chess.WHITE else -score
 
 # === Quiescence Search ===
