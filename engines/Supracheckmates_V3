@@ -382,15 +382,89 @@ def king_safety(board, color):
 
     return penalty
 
-def evaluate_pawn_structure(board, color, pawn_hash):
-    hash_key = zlib.crc32(str(sorted(board.pieces(chess.PAWN, color))).encode())
+def evaluate_pawn_structure(board: chess.Board, color: bool, pawn_hash: dict) -> int:
+    # Fast hash using pawn bitboard
+    pawn_bb = board.pieces(chess.PAWN, color)
+    hash_key = zlib.crc32(pawn_bb.__str__().encode())  # Fast enough for our use
+
     if hash_key in pawn_hash:
         return pawn_hash[hash_key]
+
+    # === Configurable Scores ===
+    isolated_penalty = -15
+    doubled_penalty = -10
+    backward_penalty = -8
+    passed_bonus = [0, 10, 20, 30, 40, 60, 80, 0]  # index by rank
     score = 0
-    for sq in board.pieces(chess.PAWN, color):
-        rank = chess.square_rank(sq) if color == chess.WHITE else 7 - chess.square_rank(sq)
-        score += PASSED_PAWN[color][min(rank, 6)]
+
+    files = [[] for _ in range(8)]
+    opp_pawns = board.pieces(chess.PAWN, not color)
+
+    for square in pawn_bb:
+        file = chess.square_file(square)
+        files[file].append(square)
+
+    for f in range(8):
+        pawns = files[f]
+        if len(pawns) > 1:
+            score += (len(pawns) - 1) * doubled_penalty
+
+        for sq in pawns:
+            rank = chess.square_rank(sq) if color == chess.WHITE else 7 - chess.square_rank(sq)
+
+            # Isolated check
+            if (f == 0 or not files[f - 1]) and (f == 7 or not files[f + 1]):
+                score += isolated_penalty
+
+            # Backward check (simplified)
+            forward = chess.square(f, chess.square_rank(sq) + (1 if color == chess.WHITE else -1))
+            if board.piece_at(forward) is None:
+                if (f > 0 and not files[f - 1]) or (f < 7 and not files[f + 1]):
+                    score += backward_penalty
+
+            # Passed pawn check (no opposing pawn in front or adjacent files)
+            passed = True
+            for df in [-1, 0, 1]:
+                nf = f + df
+                if 0 <= nf <= 7:
+                    for opp_sq in board.pieces(chess.PAWN, not color):
+                        opp_file = chess.square_file(opp_sq)
+                        opp_rank = chess.square_rank(opp_sq) if color == chess.WHITE else 7 - chess.square_rank(opp_sq)
+                        if opp_file == nf and opp_rank >= rank:
+                            passed = False
+            if passed:
+                score += passed_bonus[min(rank, 7)]
+
     pawn_hash[hash_key] = score
+    return score
+
+def evaluate_space(board: chess.Board, color: bool) -> int:
+    # Center and semi-center squares (based on GM heuristics)
+    center = [chess.E4, chess.D4, chess.E5, chess.D5]
+    semi_center = [chess.C3, chess.C4, chess.C5, chess.C6, chess.D3, chess.E3, chess.F3,
+                   chess.F4, chess.F5, chess.F6, chess.E6, chess.D6]
+
+    score = 0
+    occupied = board.occupied_co[color]
+    opp_territory = range(4, 8) if color == chess.WHITE else range(0, 4)
+
+    attacked_squares = set()
+    for square in board.occupied_co[color]:
+        piece = board.piece_at(square)
+        if not piece or piece.piece_type == chess.PAWN:
+            continue  # Ignore pawns for space
+        attacked_squares.update(board.attacks(square))
+
+    for sq in attacked_squares:
+        rank = chess.square_rank(sq)
+        if rank in opp_territory:
+            bonus = 1
+            if sq in center:
+                bonus += 4
+            elif sq in semi_center:
+                bonus += 2
+            score += bonus
+
     return score
 def tactical_threat_score(board, color):
     score = 0
@@ -470,6 +544,7 @@ def evaluate(board):
     score -= king_safety(board, chess.BLACK)
     score += tactical_threat_score(board, board.turn)
     score -= tactical_threat_score(board, not board.turn)
+    score += evaluate_space(board, us) - evaluate_space(board, them)
 
     return score if board.turn == chess.WHITE else -score
 
