@@ -318,7 +318,7 @@ def game_phase(board):
 def interpolate(mg, eg, phase):
     return (mg * (256 - phase) + eg * phase) // 256
 
-def improved_king_safety(board, color):
+def king_safety(board, color):
     king_sq = board.king(color)
     penalty = 0
 
