@@ -241,7 +241,7 @@ whitelist:
   - Supratsa
   - Shresthmah
 blacklist:
- # - eNErGyOFbEiNGbOT
+  - NimsiluBot
   - VEER-OMEGA-BOT
 books:
   Titans: "./engines/black.bin"
