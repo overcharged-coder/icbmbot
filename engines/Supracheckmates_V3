@@ -318,11 +318,26 @@ def game_phase(board):
 def interpolate(mg, eg, phase):
     return (mg * (256 - phase) + eg * phase) // 256
 
-def king_safety(board, color):
+def improved_king_safety(board, color):
     king_sq = board.king(color)
-    if king_sq is None:
-        return 0
-    return -20 * len(board.attackers(not color, king_sq))
+    penalty = 0
+
+    # Count attackers in king zone
+    zone = chess.SquareSet(chess.BB_KING_ATTACKS[king_sq])
+    attackers = sum(1 for sq in zone if board.is_attacked_by(not color, sq))
+    penalty -= 15 * attackers
+
+    # Pawn shield
+    if color == chess.WHITE:
+        for sq in [king_sq - 8, king_sq - 9, king_sq - 7]:
+            if not board.piece_at(sq) or board.piece_at(sq).piece_type != chess.PAWN:
+                penalty -= 10
+    else:
+        for sq in [king_sq + 8, king_sq + 9, king_sq + 7]:
+            if not board.piece_at(sq) or board.piece_at(sq).piece_type != chess.PAWN:
+                penalty -= 10
+
+    return penalty
 
 def evaluate_pawn_structure(board, color, pawn_hash):
     hash_key = zlib.crc32(str(sorted(board.pieces(chess.PAWN, color))).encode())
