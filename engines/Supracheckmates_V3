@@ -557,18 +557,24 @@ def quiescence(board, alpha, beta):
         return beta
     if alpha < stand_pat:
         alpha = stand_pat
-    for move in board.legal_moves:
-        if board.is_capture(move):
-            board.push(move)
-            node_count += 1
-            score = -quiescence(board, -beta, -alpha)
-            board.pop()
-            if score >= beta:
-                return beta
-            if score > alpha:
-                alpha = score
-    return alpha
 
+    captures = [move for move in board.legal_moves if board.is_capture(move)]
+    captures.sort(key=lambda m: static_exchange_eval(board, m), reverse=True)
+
+    for move in captures:
+        if static_exchange_eval(board, move) < 0:
+            continue
+
+        board.push(move)
+        node_count += 1
+        score = -quiescence(board, -beta, -alpha)
+        board.pop()
+
+        if score >= beta:
+            return beta
+        if score > alpha:
+            alpha = score
+    return alpha
 
 # === Updated Alpha-Beta with Transposition Table ===
 def alpha_beta(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
