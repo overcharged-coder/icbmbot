@@ -228,6 +228,7 @@ PASSED_PAWN = [[0, 10, 30, 50, 75, 100, 150], [0, 20, 40, 70, 120, 200, 300]]
 
 # The rest of the code remains unchanged from previous implementation.
 # === Static Exchange Evaluation ===
+
 def static_exchange_eval(board, move):
     """
     Full Static Exchange Evaluation (SEE): recursively evaluates material outcome
