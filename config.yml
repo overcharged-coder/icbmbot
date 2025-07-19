@@ -6,7 +6,7 @@ engines:
     name: "stockfish-ubuntu-x86-64-bmi2"
     ponder: false
     silence_stderr: false
-    move_overhead_multiplier: 10.0
+    move_overhead_multiplier: 5.0
     uci_options:
       Threads: 4
       Hash: 2048
