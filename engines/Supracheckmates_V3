@@ -527,6 +527,31 @@ def tactical_threat_score(board, color):
 
     return score
 
+def quick_tactical_bonus(board: chess.Board) -> int:
+    bonus = 0
+    color = board.turn
+    enemy = not color
+
+    for sq, piece in board.piece_map().items():
+        if piece.color != color:
+            continue
+
+        attacks = board.attacks(sq)
+        hanging_targets = 0
+
+        for target in attacks:
+            target_piece = board.piece_at(target)
+            if target_piece and target_piece.color == enemy:
+                if not board.is_attacked_by(enemy, sq):
+                    bonus += PIECE_VALUES[target_piece.piece_type][0] // 24
+                    hanging_targets += 1
+
+        if hanging_targets >= 2:
+            bonus += 20  # small fork bonus
+
+    return bonus
+
+
 def evaluate(board):
     phase = game_phase(board)
     score = 0
@@ -553,6 +578,10 @@ def evaluate(board):
 def quiescence(board, alpha, beta):
     global node_count
     stand_pat = evaluate(board)
+
+    # === Lightweight tactical threat bonus ===
+    stand_pat += quick_tactical_bonus(board)
+
     if stand_pat >= beta:
         return beta
     if alpha < stand_pat:
@@ -574,6 +603,7 @@ def quiescence(board, alpha, beta):
             return beta
         if score > alpha:
             alpha = score
+
     return alpha
 
 # === Updated Alpha-Beta with Transposition Table ===
