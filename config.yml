@@ -50,11 +50,11 @@ engines:
     name: "stockfish-ubuntu-x86-64-avx2"
     ponder: true
     silence_stderr: false
-    move_overhead_multiplier: 21.0
+    move_overhead_multiplier: 20.0
     uci_options:
        Threads: 4
-       Hash: 1024
-       Move Overhead: 90
+       Hash: 1048
+       Move Overhead: 100
     limits: 
   chess960:
     dir: "./engines"
