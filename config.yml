@@ -54,7 +54,7 @@ engines:
     uci_options:
        Threads: 4
        Hash: 1048
-       Move Overhead: 100
+       Move Overhead: 90
     limits: 
   chess960:
     dir: "./engines"
