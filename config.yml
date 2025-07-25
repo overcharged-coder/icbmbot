@@ -114,7 +114,7 @@ opening_books:
       selection: best_move 
      # max depth : 45 
       names:
-       # - Perfect2023
+        - niki
         - optimus4
      #   - Titans
         - Opimus3.1
