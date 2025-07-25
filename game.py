@@ -15,6 +15,7 @@ class Game:
         self.username = username
         self.game_id = game_id
 
+        self.takeback_count = 0
         self.was_aborted = False
         self.ejected_tournament: str | None = None
 
@@ -42,9 +43,10 @@ class Game:
         else:
             await lichess_game.start_pondering()
 
-        opponent_title = info.black_title if lichess_game.is_white else info.white_title
-        abortion_seconds = 30 if opponent_title == 'BOT' else 60
+        opponent_is_bot = info.white_title == 'BOT' and info.black_title == 'BOT'
+        abortion_seconds = 30 if opponent_is_bot else 60
         abortion_task = asyncio.create_task(self._abortion_task(lichess_game, chatter, abortion_seconds))
+        max_takebacks = 0 if opponent_is_bot else self.config.challenge.max_takebacks
 
         while event := await game_stream_queue.get():
             match event['type']:
@@ -58,6 +60,19 @@ class Game:
                 case 'gameFull':
                     event = event['state']
 
+            if event.get('wtakeback') or event.get('btakeback'):
+                if self.takeback_count >= max_takebacks:
+                    await self.api.handle_takeback(self.game_id, False)
+                    continue
+
+                if await self.api.handle_takeback(self.game_id, True):
+                    if self.move_task:
+                        self.move_task.cancel()
+                        self.move_task = None
+                    await lichess_game.takeback()
+                    self.takeback_count += 1
+                continue
+
             lichess_game.update(event)
 
             if event['status'] != 'started':
@@ -68,7 +83,7 @@ class Game:
                 await chatter.send_goodbyes()
                 break
 
-            if lichess_game.is_our_turn and not lichess_game.board.is_repetition():
+            if lichess_game.is_our_turn and not self.move_task and not lichess_game.board.is_repetition():
                 self.move_task = asyncio.create_task(self._make_move(lichess_game, chatter))
 
         abortion_task.cancel()
