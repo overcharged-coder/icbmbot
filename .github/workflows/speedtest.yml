@@ -1,0 +1,32 @@
+name: Stockfish AVX2 vs BMI2 Speedtest
+
+on:
+  workflow_dispatch:
+
+jobs:
+  speedtest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make Stockfish Executable
+        run: |
+          chmod +x ./engines/stockfish-ubuntu-x86-64-bmi2
+          chmod +x ./engines/stockfish-ubuntu-x86-64-avx2
+
+      - name: Run BMI2 Speedtest
+        run: |
+          echo "=== Stockfish BMI2 Speedtest ==="
+          ./engines/stockfish-ubuntu-x86-64-bmi2 <<EOF
+          speedtest
+          quit
+          EOF
+
+      - name: Run AVX2 Speedtest
+        run: |
+          echo "=== Stockfish AVX2 Speedtest ==="
+          ./engines/stockfish-ubuntu-x86-64-avx2 <<EOF
+          speedtest
+          quit
+          EOF
