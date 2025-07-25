@@ -183,6 +183,7 @@ challenge:
   concurrency: 1
   bullet_with_increment_only: false
   min_initial: 60
+  max_initial: 1200
   variants:
     - standard
     - chess960
