@@ -253,6 +253,6 @@ books:
   noob: "./engines/Titans.bin"
   ai: "./engines/nikibook.bin"
   gm: "./engines/gm2001(1).bin"
-  niki: "/.engines/nikimoves.bin"
+  niki: "./engines/nikimoves.bin"
   
 
