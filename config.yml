@@ -31,7 +31,7 @@ engines:
      # time: 20.0
       #depth: 50
     #  nodes: 5000000
-  humans:
+  standard_humans:
     dir: "./engines"
     name: "fairy-stockfish_x86-64-bmi2"
     ponder: false
@@ -119,7 +119,7 @@ opening_books:
      #   - Titans
         - Opimus3.1
        # - optimus4
-    humans: 
+    standard_humans: 
       selection: best_move 
       names: 
         - gm
@@ -182,6 +182,7 @@ resign:
 challenge:
   concurrency: 1
   bullet_with_increment_only: false
+  max_takebacks: 2
   min_initial: 60
   max_initial: 1200
   variants:
