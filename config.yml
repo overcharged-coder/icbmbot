@@ -103,7 +103,7 @@ opening_books:
       selection: best_move 
      # max_depth: 80
       names:
-      #  - ai
+        - niki
         - Perfect2023
         - Opimus3.1
         - optimus2502
@@ -253,4 +253,6 @@ books:
   noob: "./engines/Titans.bin"
   ai: "./engines/nikibook.bin"
   gm: "./engines/gm2001(1).bin"
+  niki: ".engines/nikimoves.bin"
+  
 
