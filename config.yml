@@ -103,7 +103,7 @@ opening_books:
       selection: best_move 
      # max_depth: 80
       names:
-        - niki
+      #  - niki
         - Perfect2023
         - Opimus3.1
         - optimus2502
