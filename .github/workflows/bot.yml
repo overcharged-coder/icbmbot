@@ -48,7 +48,7 @@ jobs:
       - name: Run Bot
         run: |
           echo "Starting bot..."
-          python3 -u user_interface.py "challenge Alexnajax_fan 3+0 white true" &
+          python3 -u user_interface.py "challenge Alexnajax_fan 3+0 white true"  "tournament 8DUWjdpk" &
           PID=$!
           
           # Auto-exit after 350 minutes (so restart runs without overlap)
