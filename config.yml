@@ -188,12 +188,13 @@ challenge:
   variants:
     - standard
     - chess960
-   # - antichess
+    - antichess
     - atomic
     - kingOfTheHill
     - racingKings
     - threeCheck
     - fromPosition
+    - crazyhouse
   time_controls:
     - bullet
     - blitz
