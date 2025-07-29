@@ -43,6 +43,7 @@ engines:
       Hash: 10
       Move Overhead: 125
       Use NNUE: true 
+      EvalFile: "nn-46832cfbead3.nnue"
     limits:
      # time: 20.0
       #depth: 50
