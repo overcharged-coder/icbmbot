@@ -51,7 +51,7 @@ jobs:
           PID=$!
           
           # Auto-exit after 350 minutes (so restart runs without overlap)
-          ( sleep 21000 && echo "Time up. Killing bot..." && kill -SIGTERM $PID ) &
+          ( sleep 20700 && echo "Time up. Killing bot..." && kill -SIGTERM $PID ) &
           
           wait $PID
           echo "Bot ended cleanly."
