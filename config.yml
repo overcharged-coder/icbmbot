@@ -122,7 +122,7 @@ opening_books:
      #   - Titans
         - Opimus3.1
        # - optimus4
-    standard_humans: 
+    standard_human: 
       selection: best_move 
       names: 
         - gm
