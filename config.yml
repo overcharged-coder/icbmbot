@@ -145,6 +145,7 @@ online_moves:
   opening_explorer:
     enabled: true
     priority: 300
+ #   player: Username
     only_without_book: false
     use_for_variants: true
     min_time: 20
