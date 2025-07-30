@@ -774,6 +774,7 @@ def main():
                             if name in ["BookPath", "SyzygyPath"]:
                                 uci_options[name] = value
                             elif name == "Threads":
+                                # Stockfish-style: set global thread count, clamp to allowed values
                                 uci_options[name] = min(max(int(value), 1), THREADS_MAX)
                             else:
                                 uci_options[name] = int(value)
@@ -795,24 +796,63 @@ def main():
                             board.push_uci(mv)
             elif line.startswith("go"):
                 tokens = line.split()
-                wtime = btime = None
+                # Support all major UCI go commands
+                wtime = btime = movetime = depth = nodes = None
+                infinite = False
+
                 if "wtime" in tokens:
                     try:
                         wtime = int(tokens[tokens.index("wtime") + 1])
-                    except:
+                    except Exception:
                         pass
                 if "btime" in tokens:
                     try:
                         btime = int(tokens[tokens.index("btime") + 1])
-                    except:
+                    except Exception:
                         pass
-                # Threaded search
+                if "depth" in tokens:
+                    try:
+                        depth = int(tokens[tokens.index("depth") + 1])
+                    except Exception:
+                        pass
+                if "nodes" in tokens:
+                    try:
+                        nodes = int(tokens[tokens.index("nodes") + 1])
+                    except Exception:
+                        pass
+                if "movetime" in tokens:
+                    try:
+                        movetime = int(tokens[tokens.index("movetime") + 1]) / 1000.0
+                    except Exception:
+                        pass
+                if "infinite" in tokens:
+                    infinite = True
+
+                # Set search limits
+                max_time = TIME_LIMIT
+                if movetime:
+                    max_time = movetime
+                elif wtime and board.turn == chess.WHITE:
+                    max_time = min(max_time, wtime / 1000.0 - 0.1)
+                elif btime and board.turn == chess.BLACK:
+                    max_time = min(max_time, btime / 1000.0 - 0.1)
+                if infinite:
+                    max_time = 3600.0  # 1 hour, or something big
+
+                max_depth = depth if depth else MAX_DEPTH
+                NODE_LIMIT = nodes if nodes else None
+
                 threads = uci_options.get("Threads", 1)
+                resultq = queue.Queue()
+                thread_list = []
+
+                def threaded_best_move():
+                    move = choose_best_move(board, depth=max_depth, wtime=wtime, btime=btime)
+                    resultq.put(move)
+
                 if threads > 1:
-                    resultq = queue.Queue()
-                    thread_list = []
                     for t in range(threads):
-                        st = SearchThread(board, None, wtime, btime, resultq)
+                        st = threading.Thread(target=threaded_best_move)
                         st.start()
                         thread_list.append(st)
                     move = None
@@ -824,10 +864,11 @@ def main():
                         st.join()
                 else:
                     try:
-                        move = choose_best_move(board, wtime=wtime, btime=btime)
+                        move = choose_best_move(board, depth=max_depth, wtime=wtime, btime=btime)
                     except Exception as e:
                         logger.exception("Error in choose_best_move")
                         move = None
+
                 if move and isinstance(move, chess.Move):
                     print("bestmove", move.uci())
                 else:
