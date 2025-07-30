@@ -32,7 +32,7 @@ engines:
      # time: 20.0
       #depth: 50
     #  nodes: 5000000
-  standard_human:
+  bullet_human:
     dir: "./engines"
     name: "fairy-stockfish_x86-64-bmi2"
     ponder: false
@@ -48,6 +48,16 @@ engines:
      # time: 20.0
       #depth: 50
     #  nodes: 5000000
+  standard_human:
+    dir: "./engines"
+    name: "Supracheckmates_V3"
+    ponder: false
+    silence_stderr: false
+    move_overhead_multiplier: 10.0
+    uci_options:
+      Threads: 4
+      Hash: 100
+      Move Overhead: 125
   bullet:
     dir: "./engines"
     name: "stockfish-ubuntu-x86-64-bmi2"
