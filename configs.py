@@ -53,6 +53,7 @@ class Opening_Books_Config:
 class Opening_Explorer_Config:
     enabled: bool
     priority: int
+    player: str | None
     only_without_book: bool
     use_for_variants: bool
     min_time: int
@@ -113,7 +114,6 @@ class Offer_Draw_Config:
     consecutive_moves: int
     min_game_length: int
     against_humans: bool
-   # min_rating: int | None 
 
 
 @dataclass
