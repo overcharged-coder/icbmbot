@@ -667,6 +667,7 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
     start_time = time.time()
     max_time = TIME_LIMIT
     best_score = None
+
     # Adaptive time controls
     if wtime and board.turn == chess.WHITE:
         max_time = min(max_time, wtime / 1000.0 - 0.1)
@@ -674,11 +675,15 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
         max_time = min(max_time, btime / 1000.0 - 0.1)
     if max_time < 0.05:
         max_time = 0.05
+
+    # Enforce minimum search depth of 10 plies
     min_depth = 10
-    max_depth = max(depth or MAX_DEPTH, min_depth)
+    max_depth = max(depth if depth else MAX_DEPTH, min_depth)
+
     legal_moves = list(board.legal_moves)
     if not legal_moves:
         return None
+
     # Polyglot book
     if os.path.exists(uci_options.get("BookPath", "")):
         try:
@@ -687,6 +692,7 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
                 return entry.move
         except Exception:
             pass
+
     # Syzygy tablebase
     if os.path.exists(uci_options.get("SyzygyPath", "")):
         try:
@@ -697,9 +703,12 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
                         return move
         except Exception:
             pass
+
     best_move = random.choice(legal_moves)  # Fallback
+
     try:
         for d in range(1, max_depth + 1):
+            print(f"info string Searching depth {d}")
             alpha = -MATE_VALUE
             beta = MATE_VALUE
             if best_score is not None and d >= 4:
@@ -720,7 +729,11 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
                     best_move = move
                 if best_score >= MATE_VALUE - 100:
                     return best_move
-            if time.time() - start_time > max_time * 0.9:
+            # Remove or tweak the following condition to allow full depth search:
+            # if time.time() - start_time > max_time * 0.9:
+            #    break
+            # Or, if you want to always search to min_depth, only break after min_depth is reached:
+            if d >= min_depth and time.time() - start_time > max_time * 0.9:
                 break
     except TimeoutError:
         pass
@@ -729,7 +742,6 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
     if not best_move and legal_moves:
         best_move = random.choice(legal_moves)
     return best_move
-
 # === UCI Main Loop with Multi-threaded Go Support ===
 class SearchThread(threading.Thread):
     def __init__(self, board, depth, wtime, btime, resultq):
