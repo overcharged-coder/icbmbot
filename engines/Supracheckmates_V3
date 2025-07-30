@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import sys, time, os, math, zlib, logging, random, threading, queue
-import chess, chess.polyglot, chess.syzygy
+import chess, chess.polyglot, chess.syzygy # hello , i am supratsa on lichess
 
 # === Logging Setup ===
 logging.basicConfig(filename='engine.log', level=logging.INFO)
