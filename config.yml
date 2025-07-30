@@ -58,6 +58,7 @@ engines:
       Threads: 4
       Hash: 100
       Move Overhead: 125
+    limits:
   bullet:
     dir: "./engines"
     name: "stockfish-ubuntu-x86-64-bmi2"
