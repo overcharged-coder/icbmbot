@@ -674,7 +674,8 @@ def choose_best_move(board, depth=None, wtime=None, btime=None):
         max_time = min(max_time, btime / 1000.0 - 0.1)
     if max_time < 0.05:
         max_time = 0.05
-    max_depth = depth or MAX_DEPTH
+    min_depth = 10
+    max_depth = max(depth or MAX_DEPTH, min_depth)
     legal_moves = list(board.legal_moves)
     if not legal_moves:
         return None
