@@ -110,7 +110,7 @@ gaviota:
   max_pieces: 5
 
 opening_books:
-  enabled: true
+  enabled: false
   priority: 900
   books:
     standard_white:
@@ -143,7 +143,7 @@ opening_books:
 
 online_moves:
   opening_explorer:
-    enabled: true
+    enabled: false
     priority: 300
  #   player: Username
     only_without_book: false
@@ -157,7 +157,7 @@ online_moves:
     # max_depth: 20
 
   lichess_cloud:
-    enabled: true
+    enabled: false
     priority: 200
     only_without_book: true
     min_eval_depth: 20
@@ -167,7 +167,7 @@ online_moves:
     # max_depth: 30
 
   chessdb:
-    enabled: true
+    enabled: false
     priority: 250
     only_without_book: false
     min_candidates: 5
