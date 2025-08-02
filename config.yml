@@ -157,13 +157,13 @@ online_moves:
     # max_depth: 20
 
   lichess_cloud:
-    enabled: false
+    enabled: true
     priority: 200
-    only_without_book: false
+    only_without_book: true
     min_eval_depth: 20
     min_time: 10
     timeout: 3
-    use_for_variants: true
+    use_for_variants: false
     # max_depth: 30
 
   chessdb:
