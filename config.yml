@@ -64,7 +64,7 @@ engines:
     name: "stockfish-ubuntu-x86-64-bmi2"
     ponder: true
     silence_stderr: false
-    move_overhead_multiplier: 16.5
+    move_overhead_multiplier: 17.89643213699986432247999875311367899998653212579985321378865797424
     uci_options:
        Threads: 4
        Hash: 2048
@@ -117,7 +117,7 @@ opening_books:
       selection: best_move 
      # max_depth: 80
       names:
-      #  - niki
+        - lilawhite
         - Perfect2023
         - Opimus3.1
         - optimus2502
@@ -128,7 +128,7 @@ opening_books:
       selection: best_move 
      # max depth : 45 
       names:
-        - niki
+        - lilablack
         - optimus4
      #   - Titans
         - Opimus3.1
@@ -214,12 +214,12 @@ challenge:
     - bullet
     - blitz
     - rapid
-    - classical
+  #  - classical
   bot_modes:
    # - casual
-   # - rated
+    - rated
   human_modes:
-    #- casual
+    - casual
    #- rated
 
 matchmaking:
@@ -228,7 +228,8 @@ matchmaking:
   selection: cyclic
   types:
     bullet:
-      tc: 30+0
+      tc: 0+1
+      variant: chess960
     bulle2:
       tc: 3+0
     bc:
@@ -246,7 +247,7 @@ matchmaking:
     loss:
       tc: 2+0
     drum:
-      tc: 0.5+1
+      tc: 0.5+0
       variant: chess960
 
 messages:
@@ -259,8 +260,8 @@ whitelist:
   - Supratsa
   - Shresthmah
 blacklist:
-  - NimsiluBot
-  - VEER-OMEGA-BOT
+ # - NimsiluBot
+ # - VEER-OMEGA-BOT
 books:
   Titans: "./engines/black.bin"
   optimus2502: "./engines/OPTIMUS2502.bin"
@@ -271,5 +272,7 @@ books:
   ai: "./engines/nikibook.bin"
   gm: "./engines/gm2001(1).bin"
   niki: "./engines/nikimoves.bin"
+  lilawhite: "./engines/lilawhite.bin"
+  lilablack: "./engines/lila.bin"
   
 
