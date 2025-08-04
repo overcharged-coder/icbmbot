@@ -1,0 +1,28 @@
+name: Check Syzygy Integrity
+
+on:
+  push:
+    paths:
+      - 'engines/syzygy/**'
+      - '.github/workflows/check-syzygy.yml'
+  workflow_dispatch:
+
+jobs:
+  verify-syzygy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install md5sum
+        run: sudo apt-get update && sudo apt-get install -y coreutils
+
+      - name: Verify Syzygy Tablebases
+        working-directory: engines/syzygy
+        run: |
+          if [ ! -f checksum.md5 ]; then
+            echo "checksum.md5 file not found!"
+            exit 1
+          fi
+          echo "Checking MD5 integrity of Syzygy tablebases..."
+          md5sum --check checksum.md5
