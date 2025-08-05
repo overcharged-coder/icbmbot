@@ -50,14 +50,15 @@ engines:
     #  nodes: 5000000
   standard_human:
     dir: "./engines"
-    name: "Supracheckmates_V3"
+    name: "fairy-stockfish_x86-64-bmi2"
     ponder: false
     silence_stderr: false
-    move_overhead_multiplier: 10.0
+    move_overhead_multiplier: 6.9
     uci_options:
       Threads: 4
-      Hash: 100
+      Hash: 269
       Move Overhead: 125
+      EvalFile: "nn-46832cfbead3.nnue"
     limits:
   bullet:
     dir: "./engines"
@@ -217,9 +218,9 @@ challenge:
   #  - classical
   bot_modes:
    # - casual
-    - rated
+   # - rated
   human_modes:
-    - casual
+  #  - casual
    #- rated
 
 matchmaking:
