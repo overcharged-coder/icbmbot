@@ -17,13 +17,17 @@ games_written = 0
 lines = []
 
 # === Keep-Alive Logger (runs in background) ===
+
+
 def keep_alive_logger():
     while True:
         print(f"⏳ Working... {games_written} games written so far", flush=True)
         time.sleep(30)
 
+
 # Start logging thread
 threading.Thread(target=keep_alive_logger, daemon=True).start()
+
 
 def build_lines(book_path, max_depth=20):
     def dfs(board, moves_so_far, depth):
@@ -43,6 +47,7 @@ def build_lines(book_path, max_depth=20):
 
     board = chess.Board()
     dfs(board, [], 0)
+
 
 def write_pgn(lines, output_file):
     global games_written
@@ -68,12 +73,10 @@ def write_pgn(lines, output_file):
             if games_written % LOG_INTERVAL == 0:
                 print(f"📝 Saved {games_written} games so far...", flush=True)
 
+
 # === RUN ===
 print("🔁 Starting PGN extraction...", flush=True)
 build_lines(book_path, MAX_DEPTH)
 print(f"📚 Extracted {len(lines)} lines from book", flush=True)
 write_pgn(lines, output_pgn)
 print(f"✅ Finished: {games_written} PGN games written to {output_pgn}", flush=True)
-
-
-

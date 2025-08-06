@@ -10,11 +10,13 @@ OUTPUT_PGN = "tcec_polyglot_book_cleaned.pgn"
 MAX_HALF_MOVES = 80
 SKIP_INDEXES = {960}  # skip game with illegal "Ne3" move
 
+
 def download_tcec_zip():
     print(f"⬇️ Downloading {TCEC_ZIP_URL}...")
     resp = requests.get(TCEC_ZIP_URL)
     resp.raise_for_status()
     return zipfile.ZipFile(io.BytesIO(resp.content))
+
 
 def extract_pgn_games(z):
     raw_games = []
@@ -27,9 +29,11 @@ def extract_pgn_games(z):
     print(f"📦 Loaded {len(raw_games)} raw games")
     return raw_games
 
+
 def is_stockfish(name: str) -> bool:
     name = name.lower()
     return "stockfish" in name or name.startswith("sf")
+
 
 def safe_game_from_san(game: chess.pgn.Game, max_half_moves: int) -> str | None:
     try:
@@ -46,7 +50,7 @@ def safe_game_from_san(game: chess.pgn.Game, max_half_moves: int) -> str | None:
             san = board.san(move)
             try:
                 parsed = board.parse_san(san)
-            except:
+            except BaseException:
                 return None
             if not board.is_legal(parsed):
                 return None
@@ -57,6 +61,7 @@ def safe_game_from_san(game: chess.pgn.Game, max_half_moves: int) -> str | None:
 
     except Exception:
         return None
+
 
 def filter_valid_games(raw_games):
     final = []
@@ -97,6 +102,7 @@ def filter_valid_games(raw_games):
     print(f"✅ Final filtered game count: {len(final)}")
     return final
 
+
 def validate_final_pgn(pgn_path):
     print("🔍 Validating PGN after export...")
     valid = []
@@ -118,6 +124,7 @@ def validate_final_pgn(pgn_path):
             f.write(g.strip() + "\n\n")
     print(f"✅ PGN validated: {len(valid)} games remain")
 
+
 def main():
     z = download_tcec_zip()
     raw_games = extract_pgn_games(z)
@@ -130,7 +137,6 @@ def main():
     validate_final_pgn(OUTPUT_PGN)
     print(f"📘 Final PGN ready: {OUTPUT_PGN}")
 
+
 if __name__ == "__main__":
     main()
-
-

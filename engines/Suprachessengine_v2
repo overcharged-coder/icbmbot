@@ -32,6 +32,7 @@ PIECE_VALUES = {
     chess.ROOK: 500, chess.QUEEN: 900, chess.KING: 20000
 }
 
+
 def evaluate(board):
     if board.is_checkmate():
         return -999999 if board.turn else 999999
@@ -45,8 +46,10 @@ def evaluate(board):
             score -= PIECE_VALUES[pt]
     return score if board.turn == chess.WHITE else -score
 
+
 def is_quiet(board, move):
     return not board.is_capture(move) and not board.gives_check(move)
+
 
 def sort_moves(board, moves):
     def score(move):
@@ -60,6 +63,7 @@ def sort_moves(board, moves):
         val += history_heuristic.get((board.turn, move.uci()), 0)
         return -val
     return sorted(moves, key=score)
+
 
 def quiescence(board, alpha, beta):
     global node_count
@@ -81,6 +85,7 @@ def quiescence(board, alpha, beta):
             if score > alpha:
                 alpha = score
     return alpha
+
 
 def alpha_beta(board, depth, alpha, beta, start_time, max_time, ply=0):
     global node_count
@@ -117,12 +122,14 @@ def alpha_beta(board, depth, alpha, beta, start_time, max_time, ply=0):
             value = score
             if value > alpha:
                 alpha = value
-                history_heuristic[(board.turn, move.uci())] = history_heuristic.get((board.turn, move.uci()), 0) + depth**2
+                history_heuristic[(board.turn, move.uci())] = history_heuristic.get(
+                    (board.turn, move.uci()), 0) + depth**2
         if alpha >= beta:
             break
 
     transposition_table[key] = {"value": value, "depth": depth}
     return value
+
 
 def choose_best_move(board, depth=None, nodes=None, time_limit=TIME_LIMIT):
     global node_count, NODE_LIMIT
@@ -134,7 +141,7 @@ def choose_best_move(board, depth=None, nodes=None, time_limit=TIME_LIMIT):
         try:
             entry = polyglot_book.find(board)
             return entry.move()
-        except:
+        except BaseException:
             pass
 
     # Syzygy
@@ -142,7 +149,7 @@ def choose_best_move(board, depth=None, nodes=None, time_limit=TIME_LIMIT):
         try:
             if len(board.piece_map()) <= 6:
                 return syzygy_tb.probe_root(board)
-        except:
+        except BaseException:
             pass
 
     best_move = None
@@ -170,6 +177,7 @@ def choose_best_move(board, depth=None, nodes=None, time_limit=TIME_LIMIT):
 
     return best_move
 
+
 def set_uci_option(line):
     global polyglot_book, syzygy_tb
     parts = line.split()
@@ -181,14 +189,15 @@ def set_uci_option(line):
             if name == "BookPath" and os.path.exists(value):
                 try:
                     polyglot_book = chess.polyglot.open_reader(value)
-                except:
+                except BaseException:
                     polyglot_book = None
             elif name == "SyzygyPath" and os.path.isdir(value):
                 try:
                     syzygy_tb = chess.syzygy.Tablebase()
                     syzygy_tb.add_directory(value)
-                except:
+                except BaseException:
                     syzygy_tb = None
+
 
 def handle_position(board, line):
     parts = line.split()
@@ -205,6 +214,7 @@ def handle_position(board, line):
             for mv in parts[parts.index("moves") + 1:]:
                 board.push_uci(mv)
 
+
 def handle_go(board, line):
     depth = None
     nodes = None
@@ -215,6 +225,7 @@ def handle_go(board, line):
         nodes = int(parts[parts.index("nodes") + 1])
     move = choose_best_move(board, depth=depth, nodes=nodes)
     print("bestmove", move.uci() if move else "0000")
+
 
 def main():
     board = chess.Board()
@@ -246,6 +257,7 @@ def main():
         elif line == "quit":
             break
         sys.stdout.flush()
+
 
 if __name__ == "__main__":
     main()

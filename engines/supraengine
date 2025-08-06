@@ -1,6 +1,14 @@
 #!/usr/bin/env python3
-import sys, time, os, math, zlib, logging, random
-import chess, chess.polyglot, chess.syzygy
+import sys
+import time
+import os
+import math
+import zlib
+import logging
+import random
+import chess
+import chess.polyglot
+import chess.syzygy
 
 # === Logging Setup ===
 logging.basicConfig(filename='engine.log', level=logging.INFO)
@@ -36,8 +44,11 @@ zobrist_castling = [random.getrandbits(64) for _ in range(4)]
 zobrist_side = random.getrandbits(64)
 
 # === Transposition Table ===
+
+
 class TTEntry:
     __slots__ = ('key', 'depth', 'score', 'bound', 'best_move')
+
     def __init__(self, key, depth, score, bound, best_move):
         self.key = key
         self.depth = depth
@@ -45,7 +56,9 @@ class TTEntry:
         self.bound = bound  # 'EXACT', 'LOWER', 'UPPER'
         self.best_move = best_move
 
+
 transposition_table = {}
+
 
 def compute_zobrist_key(board):
     key = 0
@@ -69,10 +82,11 @@ def compute_zobrist_key(board):
         key ^= zobrist_side
     return key
 
+
 # === Global State ===
 pawn_hash_table = {}
 history_heuristic = {}
-killer_moves = [[None]*2 for _ in range(100)]
+killer_moves = [[None] * 2 for _ in range(100)]
 counter_moves = {}
 node_count = 0
 NODE_LIMIT = None
@@ -94,135 +108,135 @@ PIECE_VALUES = {
 PST = {
     chess.PAWN: [
         # Midgame
-        [   0,   0,   0,   0,   0,   0,   0,   0,
-            5,  10,  10, -20, -20,  10,  10,   5,
-            5,  -5, -10,   0,   0, -10,  -5,   5,
-            0,   0,   0,  20,  20,   0,   0,   0,
-            5,   5,  10,  25,  25,  10,   5,   5,
-           10,  10,  20,  30,  30,  20,  10,  10,
-           50,  50,  50,  50,  50,  50,  50,  50,
-            0,   0,   0,   0,   0,   0,   0,   0
-        ],
+        [0, 0, 0, 0, 0, 0, 0, 0,
+            5, 10, 10, -20, -20, 10, 10, 5,
+            5, -5, -10, 0, 0, -10, -5, 5,
+            0, 0, 0, 20, 20, 0, 0, 0,
+            5, 5, 10, 25, 25, 10, 5, 5,
+            10, 10, 20, 30, 30, 20, 10, 10,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            0, 0, 0, 0, 0, 0, 0, 0
+         ],
         # Endgame
-        [   0,   0,   0,   0,   0,   0,   0,   0,
-           10,  20,  20,  20,  20,  20,  20,  10,
-           10,  15,  15,  15,  15,  15,  15,  10,
-           15,  20,  20,  30,  30,  20,  20,  15,
-           20,  25,  25,  35,  35,  25,  25,  20,
-           30,  35,  35,  40,  40,  35,  35,  30,
-           50,  50,  50,  50,  50,  50,  50,  50,
-            0,   0,   0,   0,   0,   0,   0,   0
-        ]
+        [0, 0, 0, 0, 0, 0, 0, 0,
+            10, 20, 20, 20, 20, 20, 20, 10,
+            10, 15, 15, 15, 15, 15, 15, 10,
+            15, 20, 20, 30, 30, 20, 20, 15,
+            20, 25, 25, 35, 35, 25, 25, 20,
+            30, 35, 35, 40, 40, 35, 35, 30,
+            50, 50, 50, 50, 50, 50, 50, 50,
+            0, 0, 0, 0, 0, 0, 0, 0
+         ]
     ],
     chess.KNIGHT: [
         # Midgame
-        [ -50, -40, -30, -30, -30, -30, -40, -50,
-          -40, -20,   0,   5,   5,   0, -20, -40,
-          -30,   0,  10,  15,  15,  10,   0, -30,
-          -30,   5,  15,  20,  20,  15,   5, -30,
-          -30,   0,  15,  20,  20,  15,   0, -30,
-          -30,   5,  10,  15,  15,  10,   5, -30,
-          -40, -20,   0,   5,   5,   0, -20, -40,
-          -50, -40, -30, -30, -30, -30, -40, -50
-        ],
+        [-50, -40, -30, -30, -30, -30, -40, -50,
+         -40, -20, 0, 5, 5, 0, -20, -40,
+         -30, 0, 10, 15, 15, 10, 0, -30,
+         -30, 5, 15, 20, 20, 15, 5, -30,
+         -30, 0, 15, 20, 20, 15, 0, -30,
+         -30, 5, 10, 15, 15, 10, 5, -30,
+         -40, -20, 0, 5, 5, 0, -20, -40,
+         -50, -40, -30, -30, -30, -30, -40, -50
+         ],
         # Endgame
-        [ -50, -40, -30, -30, -30, -30, -40, -50,
-          -40, -20,   0,   0,   0,   0, -20, -40,
-          -30,   0,  15,  20,  20,  15,   0, -30,
-          -30,   5,  20,  25,  25,  20,   5, -30,
-          -30,   0,  20,  25,  25,  20,   0, -30,
-          -30,   5,  15,  20,  20,  15,   5, -30,
-          -40, -20,   0,   0,   0,   0, -20, -40,
-          -50, -40, -30, -30, -30, -30, -40, -50
-        ]
+        [-50, -40, -30, -30, -30, -30, -40, -50,
+         -40, -20, 0, 0, 0, 0, -20, -40,
+         -30, 0, 15, 20, 20, 15, 0, -30,
+         -30, 5, 20, 25, 25, 20, 5, -30,
+         -30, 0, 20, 25, 25, 20, 0, -30,
+         -30, 5, 15, 20, 20, 15, 5, -30,
+         -40, -20, 0, 0, 0, 0, -20, -40,
+         -50, -40, -30, -30, -30, -30, -40, -50
+         ]
     ],
     chess.BISHOP: [
         # Midgame
-        [ -20, -10, -10, -10, -10, -10, -10, -20,
-          -10,   0,   0,   0,   0,   0,   0, -10,
-          -10,   0,   5,  10,  10,   5,   0, -10,
-          -10,   5,   5,  10,  10,   5,   5, -10,
-          -10,   0,  10,  10,  10,  10,   0, -10,
-          -10,  10,  10,  10,  10,  10,  10, -10,
-          -10,   5,   0,   0,   0,   0,   5, -10,
-          -20, -10, -10, -10, -10, -10, -10, -20
-        ],
+        [-20, -10, -10, -10, -10, -10, -10, -20,
+         -10, 0, 0, 0, 0, 0, 0, -10,
+         -10, 0, 5, 10, 10, 5, 0, -10,
+         -10, 5, 5, 10, 10, 5, 5, -10,
+         -10, 0, 10, 10, 10, 10, 0, -10,
+         -10, 10, 10, 10, 10, 10, 10, -10,
+         -10, 5, 0, 0, 0, 0, 5, -10,
+         -20, -10, -10, -10, -10, -10, -10, -20
+         ],
         # Endgame
-        [ -20, -10, -10, -10, -10, -10, -10, -20,
-          -10,   5,   5,   5,   5,   5,   5, -10,
-          -10,   5,  10,  15,  15,  10,   5, -10,
-          -10,   5,  15,  20,  20,  15,   5, -10,
-          -10,   5,  15,  20,  20,  15,   5, -10,
-          -10,   5,  10,  15,  15,  10,   5, -10,
-          -10,   0,   5,   5,   5,   5,   0, -10,
-          -20, -10, -10, -10, -10, -10, -10, -20
-        ]
+        [-20, -10, -10, -10, -10, -10, -10, -20,
+         -10, 5, 5, 5, 5, 5, 5, -10,
+         -10, 5, 10, 15, 15, 10, 5, -10,
+         -10, 5, 15, 20, 20, 15, 5, -10,
+         -10, 5, 15, 20, 20, 15, 5, -10,
+         -10, 5, 10, 15, 15, 10, 5, -10,
+         -10, 0, 5, 5, 5, 5, 0, -10,
+         -20, -10, -10, -10, -10, -10, -10, -20
+         ]
     ],
     chess.ROOK: [
         # Midgame
-        [   0,   0,   0,   5,   5,   0,   0,   0,
-           -5,   0,   0,   0,   0,   0,   0,  -5,
-           -5,   0,   0,   0,   0,   0,   0,  -5,
-           -5,   0,   0,   0,   0,   0,   0,  -5,
-           -5,   0,   0,   0,   0,   0,   0,  -5,
-           -5,   0,   0,   0,   0,   0,   0,  -5,
-            5,  10,  10,  10,  10,  10,  10,   5,
-            0,   0,   0,   0,   0,   0,   0,   0
-        ],
+        [0, 0, 0, 5, 5, 0, 0, 0,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            -5, 0, 0, 0, 0, 0, 0, -5,
+            5, 10, 10, 10, 10, 10, 10, 5,
+            0, 0, 0, 0, 0, 0, 0, 0
+         ],
         # Endgame
-        [   5,  10,  10,  10,  10,  10,  10,   5,
-            0,   0,   0,   0,   0,   0,   0,   0,
-            0,   0,   0,   0,   0,   0,   0,   0,
-            0,   0,   0,   0,   0,   0,   0,   0,
-            0,   0,   0,   0,   0,   0,   0,   0,
-            0,   0,   0,   0,   0,   0,   0,   0,
-            0,   0,   0,   0,   0,   0,   0,   0,
-            0,   0,   0,   0,   0,   0,   0,   0
-        ]
+        [5, 10, 10, 10, 10, 10, 10, 5,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0
+         ]
     ],
     chess.QUEEN: [
         # Midgame
-        [ -20, -10, -10,  -5,  -5, -10, -10, -20,
-          -10,   0,   0,   0,   0,   0,   0, -10,
-          -10,   0,   5,   5,   5,   5,   0, -10,
-           -5,   0,   5,   5,   5,   5,   0,  -5,
-            0,   0,   5,   5,   5,   5,   0,  -5,
-          -10,   5,   5,   5,   5,   5,   0, -10,
-          -10,   0,   5,   0,   0,   0,   0, -10,
-          -20, -10, -10,  -5,  -5, -10, -10, -20
-        ],
+        [-20, -10, -10, -5, -5, -10, -10, -20,
+         -10, 0, 0, 0, 0, 0, 0, -10,
+         -10, 0, 5, 5, 5, 5, 0, -10,
+         -5, 0, 5, 5, 5, 5, 0, -5,
+            0, 0, 5, 5, 5, 5, 0, -5,
+         -10, 5, 5, 5, 5, 5, 0, -10,
+         -10, 0, 5, 0, 0, 0, 0, -10,
+         -20, -10, -10, -5, -5, -10, -10, -20
+         ],
         # Endgame
-        [ -10,  -5,  -5,  -5,  -5,  -5,  -5, -10,
-           -5,   0,   0,   0,   0,   0,   0,  -5,
-           -5,   0,  10,  10,  10,  10,   0,  -5,
-           -5,   0,  10,  20,  20,  10,   0,  -5,
-           -5,   0,  10,  20,  20,  10,   0,  -5,
-           -5,   0,  10,  10,  10,  10,   0,  -5,
-           -5,   0,   0,   0,   0,   0,   0,  -5,
-          -10,  -5,  -5,  -5,  -5,  -5,  -5, -10
-        ]
+        [-10, -5, -5, -5, -5, -5, -5, -10,
+         -5, 0, 0, 0, 0, 0, 0, -5,
+         -5, 0, 10, 10, 10, 10, 0, -5,
+         -5, 0, 10, 20, 20, 10, 0, -5,
+         -5, 0, 10, 20, 20, 10, 0, -5,
+         -5, 0, 10, 10, 10, 10, 0, -5,
+         -5, 0, 0, 0, 0, 0, 0, -5,
+         -10, -5, -5, -5, -5, -5, -5, -10
+         ]
     ],
     chess.KING: [
         # Midgame
-        [ -30, -40, -40, -50, -50, -40, -40, -30,
-          -30, -40, -40, -50, -50, -40, -40, -30,
-          -30, -40, -40, -50, -50, -40, -40, -30,
-          -30, -40, -40, -50, -50, -40, -40, -30,
-          -20, -30, -30, -40, -40, -30, -30, -20,
-          -10, -20, -20, -20, -20, -20, -20, -10,
-           20,  20,   0,   0,   0,   0,  20,  20,
-           20,  30,  10,   0,   0,  10,  30,  20
-        ],
+        [-30, -40, -40, -50, -50, -40, -40, -30,
+         -30, -40, -40, -50, -50, -40, -40, -30,
+         -30, -40, -40, -50, -50, -40, -40, -30,
+         -30, -40, -40, -50, -50, -40, -40, -30,
+         -20, -30, -30, -40, -40, -30, -30, -20,
+         -10, -20, -20, -20, -20, -20, -20, -10,
+         20, 20, 0, 0, 0, 0, 20, 20,
+         20, 30, 10, 0, 0, 10, 30, 20
+         ],
         # Endgame
-        [ -50, -40, -30, -20, -20, -30, -40, -50,
-          -30, -20, -10,   0,   0, -10, -20, -30,
-          -30, -10,  20,  30,  30,  20, -10, -30,
-          -30, -10,  30,  40,  40,  30, -10, -30,
-          -30, -10,  30,  40,  40,  30, -10, -30,
-          -30, -10,  20,  30,  30,  20, -10, -30,
-          -30, -30,   0,   0,   0,   0, -30, -30,
-          -50, -30, -30, -30, -30, -30, -30, -50
-        ]
+        [-50, -40, -30, -20, -20, -30, -40, -50,
+         -30, -20, -10, 0, 0, -10, -20, -30,
+         -30, -10, 20, 30, 30, 20, -10, -30,
+         -30, -10, 30, 40, 40, 30, -10, -30,
+         -30, -10, 30, 40, 40, 30, -10, -30,
+         -30, -10, 20, 30, 30, 20, -10, -30,
+         -30, -30, 0, 0, 0, 0, -30, -30,
+         -50, -30, -30, -30, -30, -30, -30, -50
+         ]
     ]
 }
 
@@ -231,6 +245,8 @@ PASSED_PAWN = [[0, 10, 30, 50, 75, 100, 150], [0, 20, 40, 70, 120, 200, 300]]
 
 # The rest of the code remains unchanged from previous implementation.
 # === Static Exchange Evaluation ===
+
+
 def static_exchange_eval(board, move):
     to_sq = move.to_square
     from_sq = move.from_square
@@ -301,24 +317,30 @@ def score_move(board, move, pv_move, depth, ply):
         return 80000
     return history_heuristic.get((move.from_square, move.to_square), 0)
 
+
 def order_moves(board, moves, pv_move, depth, ply):
     return sorted(moves, key=lambda m: -score_move(board, m, pv_move, depth, ply))
 
 # === Evaluation ===
+
+
 def game_phase(board):
     phase = 0
     for piece in [chess.KNIGHT, chess.BISHOP, chess.ROOK, chess.QUEEN]:
         phase += len(board.pieces(piece, chess.WHITE)) + len(board.pieces(piece, chess.BLACK))
     return min(phase * 16, 256)
 
+
 def interpolate(mg, eg, phase):
     return (mg * (256 - phase) + eg * phase) // 256
+
 
 def king_safety(board, color):
     king_sq = board.king(color)
     if king_sq is None:
         return 0
     return -20 * len(board.attackers(not color, king_sq))
+
 
 def evaluate_pawn_structure(board, color, pawn_hash):
     hash_key = zlib.crc32(str(sorted(board.pieces(chess.PAWN, color))).encode())
@@ -330,6 +352,7 @@ def evaluate_pawn_structure(board, color, pawn_hash):
         score += PASSED_PAWN[color][min(rank, 6)]
     pawn_hash[hash_key] = score
     return score
+
 
 def evaluate(board):
     phase = game_phase(board)
@@ -350,6 +373,8 @@ def evaluate(board):
     return score if board.turn == chess.WHITE else -score
 
 # === Quiescence Search ===
+
+
 def quiescence(board, alpha, beta):
     global node_count
     stand_pat = evaluate(board)
@@ -368,6 +393,8 @@ def quiescence(board, alpha, beta):
             if score > alpha:
                 alpha = score
     return alpha
+
+
 def pvs(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
     global node_count
     if time.time() - start_time > max_time:
@@ -419,7 +446,8 @@ def pvs(board, depth, alpha, beta, start_time, max_time, ply=0, can_null=True):
             if board.is_capture(move) and static_exchange_eval(board, move) > 0:
                 board.push(move)
                 try:
-                    score = -pvs(board, depth - PROBCUT_DEPTH, -beta - PROBCUT_MARGIN, -beta - 1, start_time, max_time, ply + 1)
+                    score = -pvs(board, depth - PROBCUT_DEPTH, -beta - PROBCUT_MARGIN, -
+                                 beta - 1, start_time, max_time, ply + 1)
                 finally:
                     board.pop()
                 if score >= beta:
@@ -481,6 +509,8 @@ def calculate_time_limit(wtime, btime, winc, binc, moves_to_go, board):
     return max(0.05, min(time_per_move / 1000.0, 10.0))
 
 # --- Search Entry ---
+
+
 def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=None, moves_to_go=None):
     global node_count
     node_count = 0
@@ -496,7 +526,7 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
             entry = reader.weighted_choice(board)
             logger.info("Using Polyglot book move.")
             return entry.move
-    except:
+    except BaseException:
         logger.info("No book move available.")
 
     try:
@@ -506,7 +536,7 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
                 if move in board.legal_moves:
                     logger.info("Using Syzygy tablebase move.")
                     return move
-    except:
+    except BaseException:
         logger.info("No tablebase move available.")
 
     best_move = None
@@ -560,6 +590,8 @@ def choose_best_move(board, depth=None, wtime=None, btime=None, winc=None, binc=
     return best_move
 
 # --- Main UCI Loop ---
+
+
 def main():
     board = chess.Board()
     while True:
@@ -641,6 +673,7 @@ def main():
         except Exception as e:
             logger.exception("Exception in main loop")
             print(f"info string Engine error: {e}")
+
 
 if __name__ == "__main__":
     try:
