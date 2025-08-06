@@ -118,6 +118,7 @@ opening_books:
       selection: best_move 
      # max_depth: 80
       names:
+      #  - ai 
         - lilawhite
         - Perfect2023
         - Opimus3.1
@@ -129,8 +130,9 @@ opening_books:
       selection: best_move 
      # max depth : 45 
       names:
-      #  - lilablack
+        - ai
         - optimus4
+        - lilablack
      #   - Titans
         - Opimus3.1
        # - optimus4
