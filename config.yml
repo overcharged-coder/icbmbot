@@ -190,12 +190,14 @@ offer_draw:
   consecutive_moves: 10
   min_game_length: 40
   against_humans: false
+  min_rating: 3000
 
 resign:
   enabled: false
   score: -1000
   consecutive_moves: 6
   against_humans: false
+  min_rating: 3000
 
 challenge:
   concurrency: 1
