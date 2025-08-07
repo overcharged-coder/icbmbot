@@ -131,7 +131,7 @@ opening_books:
      # max depth : 45 
       names:
         - ai
-        - optimus4
+      #  - optimus4
         - lilablack
      #   - Titans
         - Opimus3.1
