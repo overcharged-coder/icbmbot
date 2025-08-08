@@ -84,6 +84,14 @@ class Chatter:
         match chat_message.text[1:].lower():
             case 'cpu':
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, self.cpu_message)
+            case 'roast':
+                await self.api.send_chat_message(self.game_info.id_,
+                                                 chat_message.room,
+                                                 'You are the reason they invented the undo button')
+            case 'creator':
+                await self.api.send_chat_message(self.game_info.id_,
+                                                 chat_message.room,
+                                                 'I was made by @Supratsa')    
             case 'draw':
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, self.draw_message)
             case 'eval':
@@ -117,13 +125,26 @@ class Chatter:
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, message)
             case 'ram':
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, self.ram_message)
-            case 'help' | 'commands':
+            case 'hint':
+                if chat_message.room != 'player':
+                    return
+                if self.game_info.is_rated:
+                    await self.api.send_chat_message(self.game_info.id_, chat_message.room,   
+                                                   'Hints are only available in casual games.')  
+                    return 
+                hint_message = self._get_hint_message()
+                await self.api.send_chat_message(self.game_info.id_, chat_message.room, hint_message)
+            case 'assist' | 'commands':
                 if chat_message.room == 'player':
-                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !printeval, !ram'
+                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !roast, !designer, !printeval, !ram, !help'
                 else:
-                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !printeval, !pv, !ram'
+                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !roast, !designer, !printeval, !ram, !assist'
 
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, message)
+            case _:
+                await self.api.send_chat_message(self.game_info.id_,
+                                                 chat_message.room,
+                                                 'Sorry but that command is not in my list, try !assist for a list of commands.')
 
     async def _send_last_message(self, room: str) -> None:
         last_message = self.lichess_game.last_message.replace('Engine', 'Evaluation')
@@ -156,6 +177,12 @@ class Chatter:
         cpu_freq = psutil.cpu_freq().max / 1000
 
         return f'{cpu} {cores}c/{threads}t @ {cpu_freq:.2f}GHz'
+    def _get_hint_message(self) -> str:
+        if len(self.lichess_game.last_pv) < 1:
+            return 'No hint available yet.'
+        best_move = self.lichess_game.last_pv[0]  
+        move_san = self.lichess_game.board.san(best_move) 
+        return f'Hint: {move_san}'
 
     def _get_ram(self) -> str:
         mem_bytes = psutil.virtual_memory().total
