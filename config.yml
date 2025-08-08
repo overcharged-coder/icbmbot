@@ -132,9 +132,9 @@ opening_books:
       names:
         - ai
       #  - optimus4
-        - lilablack
+      #  - lilablack
      #   - Titans
-        - Opimus3.1
+     #   - Opimus3.1
        # - optimus4
     standard_human: 
       selection: best_move 
