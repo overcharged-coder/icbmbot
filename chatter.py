@@ -181,17 +181,16 @@ class Chatter:
     def _get_hint_message(self) -> str:
         if len(self.lichess_game.last_pv) < 1:
             return 'No hint available yet.'
-        if self.lichess_game.is_our_turn:  
-            board = self.lichess_game.board.copy(stack=1)  
-            board.pop()  
-        else: 
-            board = self.lichess_game.board.copy(stack=False)  
+        if self.lichess_game.is_our_turn:
+            board = self.lichess_game.board.copy(stack=1)
+            board.pop()
+        else:
+            board = self.lichess_game.board.copy(stack=False)
         best_move = self.lichess_game.last_pv[0]
-        if best_move not in board.legal_moves: 
+        if best_move not in board.legal_moves:
             return 'No hint available for current position.'
         move_san = board.san(best_move)
         return f'Hint: {move_san}'
-        
 
     def _get_ram(self) -> str:
         mem_bytes = psutil.virtual_memory().total
