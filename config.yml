@@ -130,7 +130,7 @@ opening_books:
       selection: best_move 
      # max depth : 45 
       names:
-        - ai
+        - niki
       #  - optimus4
         - lilablack
      #   - Titans
@@ -142,6 +142,10 @@ opening_books:
         - gm
         - noob
         - Titans
+    standard_tournament:
+      selection: best_move
+      names:
+        - niki      
     
 
 online_moves:
