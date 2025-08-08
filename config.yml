@@ -207,7 +207,7 @@ challenge:
   concurrency: 1
   bullet_with_increment_only: false
   max_takebacks: 2
-  min_initial: 60
+  min_initial: 45
   max_initial: 1200
   variants:
     - standard
