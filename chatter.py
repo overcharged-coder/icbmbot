@@ -91,7 +91,7 @@ class Chatter:
             case 'creator':
                 await self.api.send_chat_message(self.game_info.id_,
                                                  chat_message.room,
-                                                 'I was made by @Supratsa')    
+                                                 'I was made by @Supratsa')
             case 'draw':
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, self.draw_message)
             case 'eval':
@@ -129,9 +129,9 @@ class Chatter:
                 if chat_message.room != 'player':
                     return
                 if self.game_info.is_rated:
-                    await self.api.send_chat_message(self.game_info.id_, chat_message.room,   
-                                                   'Hints are only available in casual games.')  
-                    return 
+                    await self.api.send_chat_message(self.game_info.id_, chat_message.room,
+                                                     'Hints are only available in casual games.')
+                    return
                 hint_message = self._get_hint_message()
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, hint_message)
             case 'assist' | 'commands':
@@ -177,11 +177,12 @@ class Chatter:
         cpu_freq = psutil.cpu_freq().max / 1000
 
         return f'{cpu} {cores}c/{threads}t @ {cpu_freq:.2f}GHz'
+
     def _get_hint_message(self) -> str:
         if len(self.lichess_game.last_pv) < 1:
             return 'No hint available yet.'
-        best_move = self.lichess_game.last_pv[0]  
-        move_san = self.lichess_game.board.san(best_move) 
+        best_move = self.lichess_game.last_pv[0]
+        move_san = self.lichess_game.board.san(best_move)
         return f'Hint: {move_san}'
 
     def _get_ram(self) -> str:
