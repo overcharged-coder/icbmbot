@@ -130,7 +130,7 @@ class Chatter:
                     return
                 if self.game_info.rated:
                     await self.api.send_chat_message(self.game_info.id_, chat_message.room,
-                                                  'Hints are only available in casual games.')
+                                                     'Hints are only available in casual games.')
                     return
                 hint_message = self._get_hint_message()
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, hint_message)
