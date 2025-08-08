@@ -182,6 +182,8 @@ class Chatter:
         if len(self.lichess_game.last_pv) < 1:
             return 'No hint available yet.'
         best_move = self.lichess_game.last_pv[0]
+        if best_move not in self.lichess_game.board.legal_moves:
+            return 'No hint available for current position.'
         move_san = self.lichess_game.board.san(best_move)
         return f'Hint: {move_san}'
 
