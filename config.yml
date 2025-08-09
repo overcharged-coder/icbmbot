@@ -32,18 +32,18 @@ engines:
      # time: 20.0
       #depth: 50
     #  nodes: 5000000
-  bullet_human:
+  0.5+0:
     dir: "./engines"
-    name: "fairy-stockfish_x86-64-bmi2"
+    name: "stockfish-ubuntu-x86-64-bmi2"
     ponder: false
     silence_stderr: false
-    move_overhead_multiplier: 10.0
+    move_overhead_multiplier: 20.0
     uci_options:
       Threads: 4
-      Hash: 100
-      Move Overhead: 125
-      Use NNUE: true 
-      EvalFile: "nn-46832cfbead3.nnue"
+      Hash: 2048
+      Move Overhead: 100
+     # Use NNUE: true 
+    #  EvalFile: "nn-46832cfbead3.nnue"
     limits:
      # time: 20.0
       #depth: 50
@@ -207,7 +207,7 @@ challenge:
   concurrency: 1
   bullet_with_increment_only: false
   max_takebacks: 2
-  min_initial: 45
+  min_initial: 30
   max_initial: 1200
   variants:
     - standard
@@ -236,6 +236,10 @@ matchmaking:
   timeout: 30
   selection: cyclic
   types:
+    hp:
+      tc: 0.5+0
+    bp:
+      tc: 0.75+0
     bullet:
       tc: 0+1
       variant: chess960
