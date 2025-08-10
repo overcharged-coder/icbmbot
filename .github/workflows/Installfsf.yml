@@ -1,0 +1,25 @@
+name: Download Fairy-Stockfish Artifact
+
+on:
+  workflow_dispatch: # manual trigger
+
+jobs:
+  download-artifact:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download artifact from run
+        run: |
+          curl -L \
+            -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://github.com/fairy-stockfish/Fairy-Stockfish/actions/runs/16853976457/artifacts/3726980056/zip \
+            -o artifact.zip
+
+      - name: Extract artifact
+        run: unzip -o artifact.zip -d .
+
+      - name: List extracted files
+        run: ls -la
