@@ -1,0 +1,36 @@
+name: Download and Commit Fairy-Stockfish
+
+on:
+  workflow_dispatch: # Run manually
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # needed to push to repo
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # so we can commit and push
+
+      - name: Download Fairy-Stockfish artifact
+        run: |
+          curl -L \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/fairy-stockfish/Fairy-Stockfish/actions/artifacts/3726980056/zip \
+            -o artifact.zip
+
+      - name: Extract artifact to repo root
+        run: unzip -o artifact.zip -d .
+
+      - name: Commit and push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Add Fairy-Stockfish binary from artifact 3726980056" || echo "No changes to commit"
+          git push
