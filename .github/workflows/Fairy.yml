@@ -1,0 +1,42 @@
+name: fsf dev
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write   # allow pushing changes
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Fairy-Stockfish artifact
+        run: |
+          curl -L \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/fairy-stockfish/Fairy-Stockfish/actions/artifacts/3726980056/zip \
+            -o artifact.zip
+
+      - name: Extract artifact
+        run: unzip -o artifact.zip
+
+      - name: Move binary to engines/ folder
+        run: |
+          mkdir -p engines
+          mv fairy-stockfish_x86-64-bmi2 engines/
+          chmod +x engines/fairy-stockfish_x86-64-bmi2
+
+      - name: Commit and push binary
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add engines/fairy-stockfish_x86-64-bmi2
+          git commit -m "Update Fairy-Stockfish binary" || echo "No changes to commit"
+          git push
