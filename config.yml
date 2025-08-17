@@ -273,7 +273,7 @@ whitelist:
   - Supratsa
   - InvinxibleFlxsh
 blacklist:
- # - NimsiluBot
+  - NimsiluBot
  # - VEER-OMEGA-BOT
 books:
   Titans: "./engines/black.bin"
