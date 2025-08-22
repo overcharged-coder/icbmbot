@@ -146,8 +146,12 @@ opening_books:
       selection: best_move
       names:
         - niki      
-    
-
+    bullet_black:
+      selection: best_move
+      names:
+        - winwhite
+        - niki 
+        - Opimus3.1
 online_moves:
   opening_explorer:
     enabled: true
@@ -283,5 +287,6 @@ books:
   niki: "./engines/nikimoves.bin"
   lilawhite: "./engines/lilawhite.bin"
   lilablack: "./engines/lila.bin"
+  winwhite: "./engines/winwhite.bin"
   
 
