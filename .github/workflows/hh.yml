@@ -1,0 +1,45 @@
+name: Check CPU Flags & DNNL Support
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check-dnnl:
+    runs-on: windows-latest
+    steps:
+      - name: Show basic CPU info
+        run: |
+          echo "CPU Info:"
+          wmic cpu get Name, NumberOfCores, NumberOfLogicalProcessors, Architecture
+
+      - name: Download and run CPU-Z
+        shell: pwsh
+        run: |
+          Write-Host "Downloading CPU-Z..."
+          Invoke-WebRequest -Uri "https://download.cpuid.com/cpu-z/cpu-z_2.10-en.zip" -OutFile cpu-z.zip
+          Expand-Archive cpu-z.zip -DestinationPath cpu-z
+          .\cpu-z\cpuz.exe /txt=cpuz.txt
+          Write-Host "CPU-Z output:"
+          Get-Content cpuz.txt
+
+      - name: Parse SIMD flags for DNNL support
+        shell: pwsh
+        run: |
+          $lines = Get-Content cpuz.txt
+          $flags = ($lines | Select-String -Pattern "SSE" -SimpleMatch).Line +
+                   ($lines | Select-String -Pattern "AVX" -SimpleMatch).Line +
+                   ($lines | Select-String -Pattern "FMA" -SimpleMatch).Line +
+                   ($lines | Select-String -Pattern "AMX" -SimpleMatch).Line
+          Write-Host "Detected SIMD features:"
+          Write-Host $flags
+
+          Write-Host "`nDNNL (oneDNN) optimization capabilities:"
+          if ($flags -match "AVX512") {
+            Write-Host "  • AVX-512 → DNNL: **Best FP32/FP16 performance**"
+          } elseif ($flags -match "AVX2" -and $flags -match "FMA") {
+            Write-Host "  • AVX2 + FMA → DNNL: **Good performance**"
+          } elseif ($flags -match "AVX2") {
+            Write-Host "  • AVX2 → DNNL: **Decent performance**"
+          } else {
+            Write-Host "  • No AVX2 → DNNL: **Runs but slower (SSE fallback)**"
+          }
