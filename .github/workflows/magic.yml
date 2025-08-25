@@ -28,9 +28,8 @@ jobs:
       - name: Make Engines + Bot Executable
         run: |
           chmod +x ./BotLi
-          chmod +x ./engines/realsupranova
           chmod +x ./engines/stockfish-ubuntu-x86-64-bmi2
-          chmod +x ./engines/lc0
+          chmod +x ./engines/fairy-stockfish_x86-64-bmi2
 
       - name: Run Bot
         env:
