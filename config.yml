@@ -120,6 +120,7 @@ opening_books:
       names:
       #  - ai 
         - lilawhite
+      #  - one
         - Perfect2023
         - Opimus3.1
         - optimus2502
@@ -145,7 +146,8 @@ opening_books:
     standard_tournament:
       selection: best_move
       names:
-        - niki      
+        - niki 
+        - one     
         - Opimus3.1
     0.5+0_black:
       selection: best_move
@@ -202,8 +204,8 @@ offer_draw:
   min_rating: 3000
 
 resign:
-  enabled: false
-  score: -1000
+  enabled: true
+  score: -1200
   consecutive_moves: 6
   against_humans: false
   min_rating: 3000
@@ -293,4 +295,5 @@ books:
   lilawhite: "./engines/lilawhite.bin"
   lilablack: "./engines/lila.bin"
   winwhite: "./engines/winwhite.bin"
+  one: "./engines/Book1.bin"
 
