@@ -159,6 +159,14 @@ opening_books:
       selection: best_move
       names: 
         - anti
+    horde_white:
+      selection: best_move
+      names: 
+        - horde
+    horde_black:
+      selection: best_move
+      names:
+        - fghhorde
 online_moves:
   opening_explorer:
     enabled: true
@@ -276,6 +284,9 @@ matchmaking:
     anti:
       tc: 0.75+0
       variant: antichess
+    horde:
+      tc: 0.5+0
+      variant: horde
 
 messages:
   greeting: "Konnichiwa guzaimase! ❤️‍🔥Using help of {engine} Type !help to glimpse my arsenal. Best of luck"
@@ -304,4 +315,6 @@ books:
   winwhite: "./engines/winwhite.bin"
   one: "./engines/book1.bin"
   anti: "./engines/anti_book.bin"
+  horde: "./engines/horde.bin"
+  fghhorde: "./engines/1horde.bin"
 
