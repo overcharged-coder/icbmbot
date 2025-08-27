@@ -25,7 +25,7 @@ engines:
     uci_options:
       Threads: 4
       Hash: 3456
-      Move Overhead: 85
+      Move Overhead: 95
       Use NNUE: true 
       EvalFile: "horde-28173ddccabe.nnue:racingkings-636b95f085e3.nnue:crazyhouse-8ebf84784ad2.nnue:kingofthehill-978b86d0e6a4.nnue:antichess-dd3cbe53cd4e.nnue:atomic-2cf13ff256cc.nnue:3check-cb5f517c228b.nnue"
     limits:
@@ -155,6 +155,10 @@ opening_books:
         - winwhite
         - niki
         - Opimus3.1
+    antichess:
+      selection: best_move
+      names: 
+        - anti
 online_moves:
   opening_explorer:
     enabled: true
@@ -299,4 +303,5 @@ books:
   lilablack: "./engines/lila.bin"
   winwhite: "./engines/winwhite.bin"
   one: "./engines/Book1.bin"
+  anti: "./engines/anti_book.bin"
 
