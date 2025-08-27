@@ -29,7 +29,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.12'
+          python-version: '3.13'
           cache: 'pip'
 
       - name: Install Python dependencies
@@ -47,7 +47,7 @@ jobs:
       - name: Run Bot
         run: |
           echo "Starting bot..."
-          python3 -u user_interface.py &
+          python3 -u user_interface.py "create 10 Torombot 1+0 true antichess" "matchmaking" &
           PID=$!
           
           # Auto-exit after 350 minutes (so restart runs without overlap)
@@ -61,6 +61,7 @@ jobs:
         run: gh workflow run bot.yml
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
 
 
