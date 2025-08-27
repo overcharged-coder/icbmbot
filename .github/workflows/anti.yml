@@ -1,0 +1,28 @@
+name: Fetch Anti Book
+
+on:
+  workflow_dispatch: # run manually
+  push:
+    branches:
+      - main
+
+jobs:
+  fetch-antibook:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout your repo
+        uses: actions/checkout@v4
+
+      - name: Download anti_book.bin from Tasty-MAGGI
+        run: |
+          mkdir -p engines
+          curl -L https://raw.githubusercontent.com/MaggiCoder16/Tasty-MAGGI/main/engines/anti_book.bin -o engines/anti_book.bin
+
+      - name: Commit and push updated anti_book.bin
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add engines/anti_book.bin
+          git commit -m "Update anti_book.bin from Tasty-MAGGI" || echo "No changes to commit"
+          git push
