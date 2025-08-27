@@ -269,6 +269,9 @@ matchmaking:
     drum:
       tc: 0.5+0
       variant: chess960
+    anti:
+      tc: 0.75+0
+      variant: antichess
 
 messages:
   greeting: "Konnichiwa guzaimase! ❤️‍🔥Using help of {engine} Type !help to glimpse my arsenal. Best of luck"
