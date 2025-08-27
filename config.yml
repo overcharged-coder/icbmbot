@@ -302,6 +302,6 @@ books:
   lilawhite: "./engines/lilawhite.bin"
   lilablack: "./engines/lila.bin"
   winwhite: "./engines/winwhite.bin"
-  one: "./engines/Book1.bin"
+  one: "./engines/book1.bin"
   anti: "./engines/anti_book.bin"
 
