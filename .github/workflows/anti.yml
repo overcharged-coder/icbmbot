@@ -2,17 +2,16 @@ name: Fetch Anti Book
 
 on:
   workflow_dispatch: # run manually
-  push:
-    branches:
-      - main
 
 jobs:
   fetch-antibook:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout your repo
+      - name: Checkout your repo (with history)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download anti_book.bin from Tasty-MAGGI
         run: |
@@ -24,5 +23,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add engines/anti_book.bin
-          git commit -m "Update anti_book.bin from Tasty-MAGGI" || echo "No changes to commit"
-          git push
+          git commit -m "Add anti_book.bin from Tasty-MAGGI" || echo "No changes to commit"
+          git pull --rebase origin main
+          git push origin main
