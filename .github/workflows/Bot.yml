@@ -48,7 +48,7 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Starting bot..."
-          Start-Process -FilePath "python" -ArgumentList "user_interface.py", "tournament Ym8ublrH the_necrominds", "matchmaking" -NoNewWindow
+          Start-Process -FilePath "python" -ArgumentList "user_interface.py", "tournament S6o2YKmp the_necrominds", "matchmaking" -NoNewWindow
           Start-Sleep -Seconds 20700  # ~5h 45m
           Write-Host "Time up. Stopping bot..."
           Get-Process python | Stop-Process -Force
