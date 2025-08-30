@@ -143,11 +143,19 @@ opening_books:
         - gm
         - noob
         - Titans
-    standard_tournament:
+    standard_black_tournament:
       selection: best_move
       names:
+        - drawing
         - niki 
         - one     
+        - Opimus3.1
+    standard_white_tournament:
+      selection: best_move
+      names: 
+        - drawingforwhite
+        - niki
+        - one 
         - Opimus3.1
     0.5+0_black:
       selection: best_move
@@ -315,4 +323,6 @@ books:
   anti: "./engines/anti_book.bin"
   horde: "./engines/horde.bin"
   fghhorde: "./engines/1horde.bin"
+  drawing: "./engines/drawing.bin"
+  drawingforwhite: "./engines/drawingforwhite.bin"
 
