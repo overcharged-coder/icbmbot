@@ -312,7 +312,7 @@ class Lichess_Game:
 
             for entry in entries:
               #  if not self._is_repetition(entry.move):
-                    break
+                break
             else:
                 continue
 
