@@ -88,7 +88,7 @@ class Chatter:
             case 'roast':
                 await self.api.send_chat_message(self.game_info.id_,
                                                  chat_message.room,
-                                                 'You are the reason they invented the undo button')
+                                                 'It’s impressive how you manage to say so much without actually adding anything of value')
             case 'creator':
                 await self.api.send_chat_message(self.game_info.id_,
                                                  chat_message.room,
@@ -145,9 +145,9 @@ class Chatter:
                 await self._send_takeback_message(chat_message.room, takeback_count, max_takebacks)
             case 'assist' | 'commands':
                 if chat_message.room == 'player':
-                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !roast, !designer, !printeval, !ram, !hint, !takeback'
+                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !roast, !designer, !printeval, !ram, !hint, !takeback, !getping'
                 else:
-                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !roast, !designer, !printeval, !ram, !assist, !takeback'
+                    message = 'Supported commands: !cpu, !draw, !eval, !motor, !name, !roast, !designer, !printeval, !ram, !assist, !takeback, !getping'
 
                 await self.api.send_chat_message(self.game_info.id_, chat_message.room, message)
             case _:
