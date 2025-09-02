@@ -218,10 +218,10 @@ online_moves:
 offer_draw:
   enabled: true
   score: 10
-  consecutive_moves: 10
-  min_game_length: 40
+  consecutive_moves: 2
+  min_game_length: 30
   against_humans: false
-  min_rating: 3000
+ # min_rating: 3000
 
 resign:
   enabled: true
