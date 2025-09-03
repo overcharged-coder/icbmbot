@@ -156,7 +156,7 @@ opening_books:
         - Opimus3.1
 online_moves:
   opening_explorer:
-    enabled: true
+    enabled: false
     priority: 300
  #   player: Username
     only_without_book: false
@@ -170,7 +170,7 @@ online_moves:
     # max_depth: 20
 
   lichess_cloud:
-    enabled: true
+    enabled: false
     priority: 200
     only_without_book: true
     min_eval_depth: 20
@@ -232,9 +232,9 @@ challenge:
   #  - classical
   bot_modes:
    # - casual
-    - rated
+ #   - rated
   human_modes:
-    - casual
+  #  - casual
    #- rated
 
 matchmaking:
