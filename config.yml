@@ -148,7 +148,8 @@ opening_books:
       names:
         - drawing
         - niki 
-        - one     
+        - one    
+        - badbot 
         - Opimus3.1
     standard_white_tournament:
       selection: best_move
@@ -329,4 +330,5 @@ books:
   fghhorde: "./engines/horde_book_black.bin"
   drawing: "./engines/drawing.bin"
   drawingforwhite: "./engines/drawingforwhite.bin"
+  badbot: "./engines/badwhite.bin"
 
