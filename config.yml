@@ -142,12 +142,19 @@ opening_books:
         - gm
         - noob
         - Titans
-    standard_tournament:
+    standard_white_tournament:
       selection: best_move
       names:
         - draw
         - niki   
         - lilawhite   
+    standard_black_tournament:
+      selection: best_move
+      names:
+        - draw
+        - niki
+        - badwhite
+        - lilawhite
     bullet_black:
       selection: best_move
       names:
@@ -291,4 +298,4 @@ books:
   lilablack: "./engines/lila.bin"
   winwhite: "./engines/winwhite.bin"
   draw: "./engines/drawing.bin"
-  
+  badwhite: "./engines/badwhite.bin"
