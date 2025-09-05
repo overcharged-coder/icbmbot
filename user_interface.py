@@ -50,7 +50,7 @@ class User_Interface:
             account = await self.api.get_account()
             username: str = account['username']
 
-            print(f' • {username}\n')
+            print(f' • WELCOME THE GOAT OF 2025! {username}\n')
 
             self.api.append_user_agent(username)
             await self._handle_bot_status(account.get('title'), allow_upgrade)
