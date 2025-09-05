@@ -7,69 +7,51 @@ on:
       - "main"
     paths:
       - "user_interface.py"
-  schedule:
-    - cron: "1 */5 * * *"  # Every 5 hours at minute 1
 
 jobs:
   build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355  # just under 6h limit
+
     concurrency:
       group: bot-run
-      cancel-in-progress: false  # Keep this false for fastest restarts
-
-    runs-on: ubuntu-latest
-    timeout-minutes: 355  # Just under 6-hour GitHub limit
+      cancel-in-progress: false  # keep live jobs safe
 
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Install GitHub CLI
-        run: sudo apt-get update && sudo apt-get install -y gh
-
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.13'
-          cache: 'pip'
 
-      - name: Install Python dependencies
-        run: pip install -r requirements.txt
+      - name: Cache pip downloads
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
-      - name: Inject Secret Token
-        run: sed -i "s/TokenTimeIsBackBuddyss/${{ secrets.LICHESS_KEY }}/g" config.yml
-
-      - name: Make Stockfish Executable
-        run: | 
-             chmod +x ./engines/stockfish-ubuntu-x86-64-bmi2
-             chmod +x ./engines/fairy-stockfish_x86-64-bmi2
-             chmod +x ./engines/Supracheckmates_V3
+      - name: Install dependencies & prepare
+        run: |
+          pip install --no-cache-dir --prefer-binary -r requirements.txt
+          sed -i "s/TokenTimeIsBackBuddyss/${{ secrets.LICHESS_KEY }}/g" config.yml
+          chmod +x ./engines/stockfish-ubuntu-x86-64-bmi2 ./engines/fairy-stockfish_x86-64-bmi2
 
       - name: Run Bot
         run: |
           echo "Starting bot..."
-          python3 -u user_interface.py "tournament TF0L5jDH" "tournament YnQTooxC" &
+          python3 -u user_interface.py "tournament YnQTooxC" &
           PID=$!
-          
-          # Auto-exit after 350 minutes (so restart runs without overlap)
+          # Auto-exit before GitHub 6h limit
           ( sleep 20700 && echo "Time up. Killing bot..." && kill -SIGTERM $PID ) &
-          
           wait $PID
           echo "Bot ended cleanly."
 
-      - name: 🔁 Self-Restart (Fire-and-Forget)
+      - name: 🔁 Self-Restart
         if: always()
-        run: gh workflow run bot.yml
+        run: gh workflow run "Run bot"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-
-
-
-
-
-
-
-
-
-
