@@ -162,6 +162,7 @@ opening_books:
         - lilawhite
     bullet_black:
       selection: best_move
+      allow_repetitions: true
       names:
         - winwhite
         - niki 
