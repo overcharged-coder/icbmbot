@@ -273,10 +273,10 @@ matchmaking:
       variant: chess960
 
 messages:
-  greeting: "Konnichiwa guzaimase! ❤️‍🔥Using help of {engine} Type !help to glimpse my arsenal. Best of luck"
-  goodbye: "GGs, ezz. May we meet again, may I win again 💶 {me} signing off!"
-  greeting_spectators: "ITZ {engine} in {me} competing for more depth with @{opponent} Type !help for a list of commands."
-  goodbye_spectators: "SIMULATION TERMINATED@{opponent}.May our paths cross again!?Thanks For watching, {me} signing off!"
+  greeting: "Wassup gamers 😈🚀 it’s ya boi icbmsaregoated2 powered by {engine} 💯 Type !help before I ratio u IRL 📈🐐"
+  goodbye: "EZ dubs 🤡💥 another opponent sent straight to the gulag 🚪👋 {me} (aka icbmsaregoated2) logging off like a giga chad 🕶️🔥"
+  greeting_spectators: "YOOO 📺👀 {me} (icbmsaregoated2) vs @{opponent} with {engine} in the cockpit 🚀🐐 Place ur bets 🤑 Type !help if u think u can even hang 💯"
+  goodbye_spectators: "Simulation cooked 🍳☢️ @{opponent} got nuked into Ohio 🌽😂 Thanks for watching legends 🐐🚀 {me} signing off until the next meme detonation 💥"
 
 whitelist:
   - Supratsa
