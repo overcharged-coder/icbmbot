@@ -75,14 +75,18 @@ class Engine:
     def name(self) -> str:
         return self.engine.id['name']
 
-    async def make_move(self, board: chess.Board, white_time: float, black_time: float, increment: float) -> tuple[chess.Move, chess.engine.InfoDict]:
+    async def make_move(self, board: chess.Board, white_time: float, black_time: float,
+                        increment: float) -> tuple[chess.Move, chess.engine.InfoDict]:
         try:
             if len(board.move_stack) < 2:
                 time_limit = 10.0 if self.opponent.is_engine else 2.5
                 if self.limit_config.time:
                     time_limit = min(time_limit, self.limit_config.time)
 
-                limit = chess.engine.Limit(time=time_limit, depth=self.limit_config.depth, nodes=self.limit_config.nodes)
+                limit = chess.engine.Limit(
+                    time=time_limit,
+                    depth=self.limit_config.depth,
+                    nodes=self.limit_config.nodes)
                 ponder = False
             else:
                 limit = chess.engine.Limit(
@@ -92,7 +96,7 @@ class Engine:
                     depth=self.limit_config.depth,
                     nodes=self.limit_config.nodes
                 )
-                ponder = self.ponder    
+                ponder = self.ponder
 
             result = await self.engine.play(board, limit, info=chess.engine.INFO_ALL, ponder=ponder)
 
@@ -107,7 +111,6 @@ class Engine:
             # Fallback: resign or play a random legal move to avoid deadlock
             move = next(iter(board.legal_moves), None)
             return move, {}
-
 
     async def start_pondering(self, board: chess.Board) -> None:
         if self.ponder:
