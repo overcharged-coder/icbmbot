@@ -30,6 +30,7 @@ STREAM_TIMEOUT = aiohttp.ClientTimeout(sock_connect=5.0, sock_read=9.0)
 
 class API:
     def __init__(self, config: Config) -> None:
+        self.chessdb_queue: asyncio.Queue[str] = asyncio.Queue()
         self.lichess_session = aiohttp.ClientSession(config.url, headers={'Authorization': f'Bearer {config.token}',
                                                                           'User-Agent': f'BotLi/{config.version}'},
                                                      timeout=aiohttp.ClientTimeout(total=5.0))
