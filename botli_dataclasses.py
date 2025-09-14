@@ -26,6 +26,7 @@ class API_Challenge_Reponse:
 class Book_Settings:
     selection: Literal['weighted_random', 'uniform_random', 'best_move'] = 'best_move'
     max_depth: int | None = None
+    allow_repetitions: bool | None = None
     readers: dict[str, MemoryMappedReader] = field(default_factory=dict)
 
 
@@ -176,6 +177,13 @@ class Game_Information:
     def tc_str(self) -> str:
         initial_time_min = self.initial_time_ms / 60_000
         if initial_time_min.is_integer():
+            initial_time_min = int(initial_time_min)
+        return f'{initial_time_min}+{self.increment_ms // 1000}'
+
+    @property
+    def tc_format(self) -> str:
+        initial_time_min = self.initial_time_ms / 60_000
+        if initial_time_min.is_integer():
             initial_time_str = str(int(initial_time_min))
         elif initial_time_min == 0.25:
             initial_time_str = '¼'
@@ -296,9 +304,9 @@ class Move_Response:
     public_message: str
     private_message: str = field(default='', kw_only=True)
     pv: list[chess.Move] = field(default_factory=list, kw_only=True)
-    is_drawish: bool = field(default=False, kw_only=True)
-    is_resignable: bool = field(default=False, kw_only=True)
-    is_engine_move: bool = field(default=False, kw_only=True)
+    is_draw: bool | None = field(default=None, kw_only=True)
+    is_lost: bool | None = field(default=None, kw_only=True)
+    trusted_eval: bool = field(default=False, kw_only=True)
 
 
 @dataclass
