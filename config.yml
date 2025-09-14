@@ -1,9 +1,9 @@
-token: "lip_1T7rrlOyBvhrhGa6jMsk"  # Lichess OAuth2 Token.
+token: "LICHESS_API_TOKEN"  # Lichess OAuth2 Token.
 
 engines:
   standard:
     dir: "./engines"
-    name: "stockfish-ubuntu-x86-64-bmi2"
+    name: "stockfish-windows-x86-64-avxvnni.exe"
     ponder: true
     silence_stderr: false
     move_overhead_multiplier: 6.5
@@ -18,7 +18,7 @@ engines:
 
   variants:
     dir: "./engines"
-    name: "fairy-stockfish_x86-64-bmi2"
+    name: "fairy-stockfish-largeboard_x86-64-modern.exe"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 22.0
@@ -34,7 +34,7 @@ engines:
     #  nodes: 5000000
   bullet_human:
     dir: "./engines"
-    name: "fairy-stockfish_x86-64-bmi2"
+    name: "fairy-stockfish-largeboard_x86-64-modern.exe"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 10.0
@@ -50,7 +50,7 @@ engines:
     #  nodes: 5000000
   standard_human:
     dir: "./engines"
-    name: "fairy-stockfish_x86-64-bmi2"
+    name: "fairy-stockfish-largeboard_x86-64-modern.exe"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 6.9
@@ -62,7 +62,7 @@ engines:
     limits:
   bullet:
     dir: "./engines"
-    name: "stockfish-ubuntu-x86-64-bmi2"
+    name: "stockfish-windows-x86-64-avxvnni.exe"
     ponder: true
     silence_stderr: false
     move_overhead_multiplier: 12.897
@@ -73,7 +73,7 @@ engines:
     limits: 
   chess960:
     dir: "./engines"
-    name: "stockfish-ubuntu-x86-64-bmi2"
+    name: "stockfish-windows-x86-64-avxvnni.exe"
     ponder: true
     silence_stderr: false
     move_overhead_multiplier: 20.0
@@ -127,6 +127,7 @@ opening_books:
        # - optimus4
       #  - Opimus3.1
         - noob
+        - coolwbook
     standard_black:
       selection: best_move 
       allow_repetitions: true
@@ -137,6 +138,7 @@ opening_books:
      #   - lilablack
      #   - Titans
         - Opimus3.1
+        - coolbbook
        # - optimus4
     standard_human: 
       selection: best_move 
@@ -145,13 +147,15 @@ opening_books:
         - gm
         - noob
         - Titans
+        - coolbook
     standard_white_tournament:
       selection: best_move
       allow_repetitions: true
       names:
         - draw
         - niki   
-        - lilawhite   
+        - lilawhite  
+        - coolbook 
     standard_black_tournament:
       selection: best_move
       allow_repetitions: true
@@ -160,6 +164,7 @@ opening_books:
         - niki
         - badwhite
         - lilawhite
+        - coolbook
     bullet_black:
       selection: best_move
       allow_repetitions: true
@@ -168,6 +173,7 @@ opening_books:
         - niki 
         - badwhite
         - Opimus3.1
+        - coolbbook
 online_moves:
   opening_explorer:
     enabled: false
@@ -203,7 +209,7 @@ online_moves:
     only_without_book: false
     min_candidates: 2
     min_time: 20
-    timeout: 3
+    timeout: 10
     selection: "optimal"
     allow_repetitions: true 
     trust_eval: true 
@@ -245,17 +251,18 @@ challenge:
     - threeCheck
     - fromPosition
     - crazyhouse
+    - horde
   time_controls:
     - bullet
     - blitz
     - rapid
   #  - classical
   bot_modes:
-   # - casual
- #   - rated
+    - casual
+    - rated
   human_modes:
-  #  - casual
-   #- rated
+    - casual
+    - rated
 
 matchmaking:
   delay: 10
@@ -264,7 +271,6 @@ matchmaking:
   types:
     bullet:
       tc: 0+1
-      variant: chess960
     bulle2:
       tc: 3+0
     bc:
@@ -283,7 +289,6 @@ matchmaking:
       tc: 2+0
     drum:
       tc: 0.5+0
-      variant: chess960
 
 messages:
   greeting: "Wassup gamers 😈🚀 it’s ya boi icbmsaregoated2 powered by {engine} 💯 Type !help before I ratio u IRL 📈🐐"
@@ -312,3 +317,6 @@ books:
   winwhite: "./engines/winwhite.bin"
   draw: "./engines/drawing.bin"
   badwhite: "./engines/badwhite.bin"
+  coolbook: "./engines/book.bin"
+  coolwbook: "./engines/BOOK_W.bin"
+  coolbbook: "./engines/BOOK_B.bin"
