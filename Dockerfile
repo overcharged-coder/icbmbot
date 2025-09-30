@@ -2,7 +2,6 @@ FROM python:3.13
 COPY . .
 
 RUN apt-get update && apt-get upgrade -y
-RUN mv config.yml
 RUN pip --no-cache-dir install -U pip && pip --no-cache-dir install -r requirements.txt
 
 RUN curl -sSL https://raw.githubusercontent.com/ppigazzini/stockfish-downloader/main/posix_helper.sh | sh -s
