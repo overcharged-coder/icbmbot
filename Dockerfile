@@ -21,4 +21,4 @@ RUN wget "https://drive.google.com/u/0/uc?id=1x25r_1PgB5XqttkfR494M4rseiIm0BAV&e
 RUN wget "https://drive.google.com/u/0/uc?id=1Tiq8FqSu7eiekE2iaWQzSdJPg-mhvLzJ&export=download" -O engines/racingkings-636b95f085e3.nnue
 
 # Add the "--matchmaking" flag to start the matchmaking mode.
-CMD python user_interface.py matchmaking
+CMD python keepalive.py
