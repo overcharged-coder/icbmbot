@@ -3,7 +3,7 @@ token: "LICHESS_API_TOKEN"  # Lichess OAuth2 Token.
 engines:
   standard:
     dir: "./engines"
-    name: "stockfish-windows-x86-64-avxvnni.exe"
+    name: "stockfish-ubuntu-x86-64-bmi2"
     ponder: true
     silence_stderr: false
     move_overhead_multiplier: 6.5
