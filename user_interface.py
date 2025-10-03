@@ -44,7 +44,9 @@ EnumT = TypeVar('EnumT', bound=StrEnum)
 class User_Interface:
     async def main(self, commands: list[str], config_path: str, allow_upgrade: bool) -> None:
         self.config = Config.from_yaml(config_path)
-
+        env_token = os.environ.get("LICHESS_API_TOKEN")
+        if env_token:
+            self.config.token = env_token
         async with API(self.config) as self.api:
             print(f'{LOGO} {self.config.version}\n')
 
