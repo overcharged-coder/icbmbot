@@ -6,6 +6,8 @@ on:
 jobs:
   check-dnnl:
     runs-on: windows-latest
+    env:
+      LICHESS_API_TOKEN: ${{ secrets.LICHESS_API_TOKEN }}   # 🔑 Add secret here
     steps:
       - name: Show basic CPU info
         run: |
@@ -43,3 +45,13 @@ jobs:
           } else {
             Write-Host "  • No AVX2 → DNNL: **Runs but slower (SSE fallback)**"
           }
+
+      - name: Check that secret is available
+        shell: pwsh
+        run: |
+          if (-not $env:LICHESS_TOKEN) {
+            Write-Error "LICHESS_TOKEN is not set!"
+            exit 1
+          }
+          Write-Host "Secret LICHESS_TOKEN is available (masked in logs)."
+          Write-Host "Token length: $($env:LICHESS_TOKEN.Length)"
