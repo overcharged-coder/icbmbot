@@ -1,4 +1,4 @@
-token: "lip_fxADi6CcK5ocDI8ktbAE"  # Lichess OAuth2 Token.
+token: ""  # Lichess OAuth2 Token.
 
 engines:
   standard:
