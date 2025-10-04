@@ -18,7 +18,7 @@ engines:
 
   variants:
     dir: "./engines"
-    name: "fairy-stockfish-largeboards_x86-64-bmi2"
+    name: "fairy-stockfish"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 22.0
@@ -34,7 +34,7 @@ engines:
     #  nodes: 5000000
   bullet_human:
     dir: "./engines"
-    name: "fairy-stockfish-largeboards_x86-64-bmi2"
+    name: "fairy-stockfish"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 10.0
@@ -50,7 +50,7 @@ engines:
     #  nodes: 5000000
   standard_human:
     dir: "./engines"
-    name: "fairy-stockfish-largeboards_x86-64-bmi2"
+    name: "fairy-stockfish"
     ponder: false
     silence_stderr: false
     move_overhead_multiplier: 6.9
