@@ -22,7 +22,7 @@ def show_logs():
 
 def run_bot():
     process = subprocess.Popen(
-        ["python", "user_interface.py", "matchmaking"],
+        ["python3", "user_interface.py", "matchmaking"],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
