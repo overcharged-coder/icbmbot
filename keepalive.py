@@ -9,6 +9,9 @@ app = Flask(__name__)
 # Keep last 200 lines of logs in memory
 logs = deque(maxlen=200)
 
+# Prevent multiple launches
+bot_started = False
+
 
 @app.route("/")
 def home():
@@ -37,9 +40,17 @@ def run_bot():
     process.wait()
 
 
+def start_bot_once():
+    """Start the bot only once per process."""
+    global bot_started
+    if not bot_started:
+        bot_started = True
+        threading.Thread(target=run_bot, daemon=True).start()
+
+
 if __name__ == "__main__":
-    # Start the bot in a background thread
-    threading.Thread(target=run_bot, daemon=True).start()
+    # Start the bot once
+    start_bot_once()
 
     # Run Flask server to satisfy Render
     port = int(os.environ.get("PORT", 5000))
